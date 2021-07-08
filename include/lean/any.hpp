@@ -11,7 +11,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <new> // placement-new
+#include <lean/memory.hpp>
 #include <lean/utility.hpp>
 #include <lean/type_traits.hpp>
 
@@ -216,12 +216,12 @@ protected:
         template <typename... Args>
         static void create(storage_type& self, Args&&... args) noexcept(std::is_nothrow_constructible<T, Args...>::value)
         {
-            new (&self.buffer) T{ std::forward<Args>(args)... };
+            construct_at(cast(self), std::forward<Args>(args)...);
         }
 
         static void destroy(storage_type& self)
         {
-            cast(self)->~T();
+            destroy_at(cast(self));
         }
 
         static bool holds(const unique_any& self) noexcept
