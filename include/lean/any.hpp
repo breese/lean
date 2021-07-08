@@ -71,7 +71,10 @@ public:
 
     ~unique_any()
     {
-        detach();
+        if (has_value())
+        {
+            interface->destroy(storage);
+        }
     }
 
     //! @brief Recreates object by moving.
@@ -139,14 +142,6 @@ public:
     }
 
 protected:
-    void detach()
-    {
-        if (has_value())
-        {
-            interface->destroy(storage);
-        }
-    }
-
     union storage_type
     {
         constexpr storage_type() noexcept = default;
