@@ -23,5 +23,7 @@ else()
   target_compile_options(lean INTERFACE -Wall -Wextra -pedantic -Werror=return-type)
 endif()
 
+add_subdirectory(src)
+
 enable_testing()
 add_subdirectory(test)

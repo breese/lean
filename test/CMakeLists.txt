@@ -19,3 +19,6 @@ endfunction()
 
 # any
 lean_test(any_suite any_suite.cpp)
+
+# atomic
+lean_test(atomic_suite atomic_suite.cpp)
