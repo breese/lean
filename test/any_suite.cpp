@@ -11,7 +11,7 @@ static_assert(!std::is_copy_constructible<lean::unique_any>::value, "not copy co
 static_assert(std::is_nothrow_move_constructible<lean::unique_any>::value, "move constructible");
 static_assert(std::is_constructible<lean::unique_any, int>::value, "value constructible");
 #if defined(LEAN_HAS_IN_PLACE_TYPE)
-static_assert(std::is_constructible<lean::unique_any, lean::inplace_type_t<int>, int>::value, "inplace constructible");
+static_assert(std::is_constructible<lean::unique_any, lean::in_place_type_t<int>, int>::value, "inplace constructible");
 #endif
 
 static_assert(!std::is_copy_assignable<lean::unique_any>::value, "not copy assignable");
