@@ -1,21 +1,27 @@
-#undef NDEBUG
-#include <cassert>
+#include "test_assert.hpp"
 #include <lean/any.hpp>
 
 //-----------------------------------------------------------------------------
 
-namespace api_suite
+namespace unique_any_suite
 {
+
+static_assert(std::is_nothrow_default_constructible<lean::unique_any>::value, "default constructible");
+static_assert(!std::is_copy_constructible<lean::unique_any>::value, "not copy constructible");
+static_assert(std::is_nothrow_move_constructible<lean::unique_any>::value, "move constructible");
+static_assert(std::is_constructible<lean::unique_any, int>::value, "value constructible");
+#if defined(LEAN_HAS_IN_PLACE_TYPE)
+static_assert(std::is_constructible<lean::unique_any, lean::inplace_type_t<int>, int>::value, "inplace constructible");
+#endif
+
+static_assert(!std::is_copy_assignable<lean::unique_any>::value, "not copy assignable");
+static_assert(std::is_nothrow_move_assignable<lean::unique_any>::value, "move assignable");
+static_assert(std::is_assignable<lean::unique_any, int>::value, "value assignable");
 
 void api_ctor_default()
 {
     lean::unique_any any;
     assert(!any.has_value());
-}
-
-void api_ctor_copy()
-{
-    assert(!std::is_copy_constructible<lean::unique_any>::value);
 }
 
 void api_ctor_move()
@@ -41,11 +47,6 @@ void api_ctor_inplace()
     assert(any.has_value());
     assert(any.holds<int>());
 #endif
-}
-
-void api_assign_copy()
-{
-    assert(!std::is_copy_assignable<lean::unique_any>::value);
 }
 
 void api_assign_move()
@@ -149,11 +150,9 @@ void api_swap()
 void run()
 {
     api_ctor_default();
-    api_ctor_copy();
     api_ctor_move();
     api_ctor_value();
     api_ctor_inplace();
-    api_assign_copy();
     api_assign_move();
     api_assign_value();
     api_has_value();
@@ -164,12 +163,12 @@ void run()
     api_swap();
 }
 
-} // namespace api_suite
+} // namespace unique_any_suite
 
 //-----------------------------------------------------------------------------
 
 int main()
 {
-    api_suite::run();
+    unique_any_suite::run();
     return 0;
 }

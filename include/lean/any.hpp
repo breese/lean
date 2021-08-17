@@ -36,7 +36,7 @@ public:
     //!
     //! @post other is in a moved-from state.
 
-    unique_any(unique_any&& other)
+    unique_any(unique_any&& other) noexcept
     {
         swap(other);
     }
@@ -79,7 +79,7 @@ public:
 
     //! @brief Recreates object by moving.
 
-    unique_any& operator=(unique_any&& other)
+    unique_any& operator=(unique_any&& other) noexcept
     {
         unique_any(std::move(other)).swap(*this);
         return *this;

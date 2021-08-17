@@ -8,10 +8,14 @@
 #
 ###############################################################################
 
+find_package(Threads REQUIRED)
+
 function(lean_test name)
   add_executable(${name} ${ARGN})
-  target_link_libraries(${name} lean)
+  target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(${name} lean-core ${CMAKE_THREAD_LIBS_INIT})
   add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/${name})
 endfunction()
 
-lean_test(unique_any_suite unique_any_suite.cpp)
+# any
+lean_test(any_suite any_suite.cpp)
