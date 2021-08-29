@@ -142,6 +142,12 @@ public:
     }
 
 protected:
+    template <typename T>
+    friend const T * any_cast(const unique_any *) noexcept;
+
+    template <typename T>
+    friend T * any_cast(unique_any *) noexcept;
+
     union storage_type
     {
         constexpr storage_type() noexcept = default;
@@ -166,12 +172,12 @@ protected:
     template <typename T, typename = void>
     struct overload
     {
-        static T* cast(storage_type& self)
+        static T* cast(storage_type& self) noexcept
         {
             return static_cast<T*>(self.pointer);
         }
 
-        static const T* cast(const storage_type& self)
+        static const T* cast(const storage_type& self) noexcept
         {
             return static_cast<const T*>(self.pointer);
         }
@@ -198,12 +204,12 @@ protected:
     struct overload<T,
                     typename std::enable_if<(sizeof(T) <= sizeof(storage.buffer)) && lean::is_trivially_move_constructible<T>::value>::type>
     {
-        static T* cast(storage_type& self)
+        static T* cast(storage_type& self) noexcept
         {
             return &reinterpret_cast<T&>(self.buffer);
         }
 
-        static const T* cast(const storage_type& self)
+        static const T* cast(const storage_type& self) noexcept
         {
             return &reinterpret_cast<const T&>(self.buffer);
         }
@@ -230,6 +236,16 @@ protected:
     template <typename Unused>
     struct overload<void, Unused>
     {
+        static void * cast(storage_type&) noexcept
+        {
+            return nullptr;
+        }
+
+        static const void * cast(const storage_type&) noexcept
+        {
+            return nullptr;
+        }
+
         static bool holds(const unique_any& self) noexcept
         {
             return !self.has_value();
@@ -245,11 +261,36 @@ protected:
             return data;
         }
     };
+
+    template <typename T>
+    const T *cast() const noexcept
+    {
+        return overload<T>::cast(storage);
+    }
+
+    template <typename T>
+    T *cast() noexcept
+    {
+        return overload<T>::cast(storage);
+    }
 };
+
+template <typename T>
+const T * any_cast(const unique_any *self) noexcept
+{
+    return self->holds<T>() ? self->cast<T>() : nullptr;
+}
+
+template <typename T>
+T * any_cast(unique_any *self) noexcept
+{
+    return self->holds<T>() ? self->cast<T>() : nullptr;
+}
 
 } // namespace v1
 
-using unique_any = v1::unique_any;
+using v1::unique_any;
+using v1::any_cast;
 
 } // namespace lean
 

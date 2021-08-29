@@ -167,8 +167,52 @@ void run()
 
 //-----------------------------------------------------------------------------
 
+namespace any_cast_suite
+{
+
+void cast_empty()
+{
+    {
+        lean::unique_any any;
+        assert(lean::any_cast<void>(&any) == nullptr);
+        assert(lean::any_cast<int>(&any) == nullptr);
+    }
+    {
+        const lean::unique_any any;
+        assert(lean::any_cast<void>(&any) == nullptr);
+        assert(lean::any_cast<int>(&any) == nullptr);
+    }
+}
+
+void cast_value()
+{
+    {
+        lean::unique_any any{42};
+        assert(lean::any_cast<void>(&any) == nullptr);
+        assert(lean::any_cast<int>(&any) != nullptr);
+        assert(*lean::any_cast<int>(&any) == 42);
+    }
+    {
+        const lean::unique_any any{42};
+        assert(lean::any_cast<void>(&any) == nullptr);
+        assert(lean::any_cast<int>(&any) != nullptr);
+        assert(*lean::any_cast<int>(&any) == 42);
+    }
+}
+
+void run()
+{
+    cast_empty();
+    cast_value();
+}
+
+} // namespace any_cast_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     unique_any_suite::run();
+    any_cast_suite::run();
     return 0;
 }
