@@ -37,6 +37,8 @@
 #define LEAN_CONSTEXPR_CXX17 LEAN_ENABLE_CXX17(constexpr)
 #define LEAN_CONSTEXPR_CXX20 LEAN_ENABLE_CXX20(constexpr)
 
+#define LEAN_IF_CONSTEXPR(x) if LEAN_CONSTEXPR_CXX17 (x)
+
 // Warnings
 //
 // Uses C99 _Pragma()
