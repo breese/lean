@@ -16,6 +16,34 @@
 namespace lean
 {
 
+//-----------------------------------------------------------------------------
+
+template <typename T>
+struct is_mutable_reference : std::false_type {};
+
+template <typename T>
+struct is_mutable_reference<T&> : std::true_type {};
+
+template <typename T>
+struct is_mutable_reference<const T&> : std::false_type {};
+
+template <typename T>
+struct is_mutable_reference<T&&> : std::false_type {};
+
+template <typename T>
+struct is_mutable_reference<const T&&> : std::false_type {};
+
+//-----------------------------------------------------------------------------
+// Perfect forwarding with trivial type decay
+
+template <typename T>
+using decay_forward_t = typename std::conditional<
+    std::is_trivial<typename std::decay<T>::type>::value && !is_mutable_reference<T>::value,
+    typename std::decay<T>::type,
+    typename std::add_rvalue_reference<T>::type
+    >::type;
+
+//-----------------------------------------------------------------------------
 // Workaround for GCC "forming reference to void" error message
 
 template <typename T>

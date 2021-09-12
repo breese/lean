@@ -37,4 +37,17 @@
 #define LEAN_CONSTEXPR_CXX17 LEAN_ENABLE_CXX17(constexpr)
 #define LEAN_CONSTEXPR_CXX20 LEAN_ENABLE_CXX20(constexpr)
 
+// Warnings
+//
+// Uses C99 _Pragma()
+
+#define LEAN_WARNING_SCOPE_BEGIN _Pragma("GCC diagnostic push")
+#define LEAN_WARNING_SCOPE_END _Pragma("GCC diagnostic pop")
+
+#define LEAN_WARNING_IGNORE_NORETURN _Pragma("GCC diagnostic ignored \"-Wmissing-noreturn\"")
+
+// Attributes
+
+#define LEAN_ATTRIBUTE_NOINLINE [[gnu::noinline]]
+
 #endif // LEAN_DETAIL_CONFIG_HPP
