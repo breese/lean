@@ -230,7 +230,7 @@ struct throw_traits<ignored_error>
     using result_type = void;
 
     template <typename... Args>
-    static result_type invoke(Args&&... args) {}
+    static result_type invoke(Args&&...) {}
 };
 
 template <>
@@ -239,7 +239,7 @@ struct throw_traits<returning_error>
     using result_type = bool;
 
     template <typename... Args>
-    static result_type invoke(Args&&... args)
+    static result_type invoke(Args&&...)
     {
         return false;
     }
