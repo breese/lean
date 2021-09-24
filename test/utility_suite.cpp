@@ -95,7 +95,42 @@ static_assert(std::is_same<decltype(lean::decay_forward<const nontrivial&&>(valu
 
 //-----------------------------------------------------------------------------
 
+namespace exchange_suite
+{
+
+void exchange_int()
+{
+    int value = 42;
+    auto original = lean::exchange(value, 43);
+    assert(value == 43);
+    assert(original == 42);
+}
+
+void exchange_trivial()
+{
+    trivial value_trivial;
+    lean::exchange(value_trivial, trivial{});
+}
+
+void exchange_nontrivial()
+{
+    nontrivial value_nontrivial;
+    lean::exchange(value_nontrivial, nontrivial{});
+}
+
+void run()
+{
+    exchange_int();
+    exchange_trivial();
+    exchange_nontrivial();
+}
+
+} // namespace exchange_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
+    exchange_suite::run();
     return 0;
 }
