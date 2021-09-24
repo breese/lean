@@ -31,3 +31,6 @@ lean_test(throw_suite throw_suite.cpp)
 
 # type_traits
 lean_test(type_traits_suite type_traits_suite.cpp)
+
+# utility
+lean_test(utility_suite utility_suite.cpp)
