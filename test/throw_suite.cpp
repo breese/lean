@@ -16,59 +16,6 @@
 
 //-----------------------------------------------------------------------------
 
-static_assert(!lean::is_mutable_reference<int>::value, "");
-static_assert(lean::is_mutable_reference<int&>::value, "");
-static_assert(!lean::is_mutable_reference<int&&>::value, "");
-static_assert(!lean::is_mutable_reference<const int&>::value, "");
-static_assert(!lean::is_mutable_reference<const int&&>::value, "");
-
-//-----------------------------------------------------------------------------
-
-static_assert(std::is_same<lean::decay_forward_t<int>, int>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<int&>, int&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<int&&>, int>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const int>, int>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const int&>, int>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const int&&>, int>::value, "value");
-
-// Pointers
-
-static_assert(std::is_same<lean::decay_forward_t<int *>, int *>::value, "pointer");
-static_assert(std::is_same<lean::decay_forward_t<const int *>, const int *>::value, "pointer");
-
-// Decay arrays
-
-static_assert(std::is_same<lean::decay_forward_t<int[]>, int *>::value, "pointer");
-static_assert(std::is_same<lean::decay_forward_t<int[4]>, int *>::value, "pointer");
-static_assert(std::is_same<lean::decay_forward_t<const int[4]>, const int *>::value, "pointer");
-static_assert(std::is_same<lean::decay_forward_t<const int (&)[4]>, const int *>::value, "pointer");
-
-struct trivial
-{
-    ~trivial() = default;
-};
-
-static_assert(std::is_same<lean::decay_forward_t<trivial>, trivial>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<trivial&>, trivial&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<trivial&&>, trivial>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const trivial>, trivial>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const trivial&>, trivial>::value, "value");
-static_assert(std::is_same<lean::decay_forward_t<const trivial&&>, trivial>::value, "value");
-
-struct non_trivial
-{
-    ~non_trivial() {};
-};
-
-static_assert(std::is_same<lean::decay_forward_t<non_trivial>, non_trivial&&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<non_trivial&>, non_trivial&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<non_trivial&&>, non_trivial&&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<const non_trivial>, const  non_trivial&&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<const non_trivial&>, const non_trivial&>::value, "reference");
-static_assert(std::is_same<lean::decay_forward_t<const non_trivial&&>, const non_trivial&&>::value, "reference");
-
-//-----------------------------------------------------------------------------
-
 namespace decay_forward_suite
 {
 

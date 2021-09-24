@@ -28,3 +28,6 @@ lean_test(checked_suite checked_suite.cpp)
 
 # throw_exception
 lean_test(throw_suite throw_suite.cpp)
+
+# type_traits
+lean_test(type_traits_suite type_traits_suite.cpp)
