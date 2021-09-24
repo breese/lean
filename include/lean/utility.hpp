@@ -12,6 +12,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <utility>
+#include <lean/detail/config.hpp>
 #include <lean/type_traits.hpp>
 
 namespace lean
@@ -37,11 +38,7 @@ constexpr auto decay_forward(typename std::remove_reference<T>::type&& value) no
 
 #if __cpp_lib_exchange_function >= 201304L
 
-template <typename T, typename U>
-inline T exchange(T& target, U&& replacement)
-{
-    return std::exchange(target, std::forward<U>(replacement));
-}
+using std::exchange;
 
 #else
 
@@ -58,17 +55,12 @@ T exchange(T& target, U&& replacement)
 //-----------------------------------------------------------------------------
 // P0504
 
-#if __cpp_lib_any >= 201606L
+#if __cplusplus >= LEAN_CXX17
 
-using in_place_t = std::in_place_t;
-
-inline constexpr auto in_place = std::in_place;
-
-template <typename T>
-using in_place_type_t = std::in_place_type_t<T>;
-
-template <typename T>
-inline constexpr auto in_place_type = std::in_place_type;
+using std::in_place_t;
+using std::in_place;
+using std::in_place_type_t;
+using std::in_place_type;
 
 #define LEAN_HAS_IN_PLACE 1
 #define LEAN_HAS_IN_PLACE_TYPE 1
