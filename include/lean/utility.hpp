@@ -94,6 +94,93 @@ enum in_place_t { in_place };
 
 #endif
 
+//-----------------------------------------------------------------------------
+// integer_sequence
+
+#if __cpp_lib_integer_sequence >= 201304L
+
+using std::integer_sequence;
+using std::index_sequence;
+
+using std::make_integer_sequence;
+using std::make_index_sequence;
+
+using std::index_sequence_for;
+
+#else
+
+// Partly inspired by Boost::Mpl11
+
+template <typename T, T... Ints>
+struct integer_sequence
+{
+    using value_type = T;
+    static constexpr std::size_t size() noexcept { return sizeof...(Ints); }
+};
+
+template <std::size_t... Ints>
+using index_sequence = integer_sequence<std::size_t, Ints...>;
+
+namespace detail
+{
+
+template <typename, typename...>
+struct append_integer_sequence;
+
+template <typename T, T... Lhs, T... Rhs>
+struct append_integer_sequence<T, integer_sequence<T, Lhs...>, integer_sequence<T, Rhs...>>
+{
+    using type = integer_sequence<T, Lhs..., (Rhs + sizeof...(Lhs))...>;
+};
+
+template <typename>
+struct make_integer_sequence;
+
+template <typename T, T N>
+struct make_integer_sequence_helper
+{
+private:
+    using sequence = typename make_integer_sequence<std::integral_constant<T, N / 2>>::type;
+    using lhs_sequence = typename append_integer_sequence<T, sequence, sequence>::type;
+    using rhs_sequence = typename make_integer_sequence<std::integral_constant<T, N % 2>>::type;
+
+public:
+    using type = typename append_integer_sequence<T, lhs_sequence, rhs_sequence>::type;
+};
+
+template <typename C>
+struct make_integer_sequence
+{
+    static_assert(C::value >= 0, "N cannot be negative");
+
+    using type = typename detail::make_integer_sequence_helper<typename C::value_type, C::value>::type;
+};
+
+template <typename T>
+struct make_integer_sequence<std::integral_constant<T, 0>>
+{
+    using type = integer_sequence<T>;
+};
+
+template <typename T>
+struct make_integer_sequence<std::integral_constant<T, 1>>
+{
+    using type = integer_sequence<T, 0>;
+};
+
+} // namespace detail
+
+template <typename T, T N>
+using make_integer_sequence = typename detail::make_integer_sequence<std::integral_constant<T, N>>::type;
+
+template <std::size_t N>
+using make_index_sequence = make_integer_sequence<std::size_t, N>;
+
+template <typename... T>
+using index_sequence_for = make_index_sequence<sizeof...(T)>;
+
+#endif
+
 } // namespace lean
 
 #endif // LEAN_UTILITY_HPP

@@ -129,6 +129,51 @@ void run()
 
 //-----------------------------------------------------------------------------
 
+namespace integer_sequence_suite
+{
+
+static_assert(std::is_same<typename lean::integer_sequence<int>::value_type, int>::value, "");
+static_assert(std::is_same<typename lean::integer_sequence<unsigned int>::value_type, unsigned int>::value, "");
+
+static_assert(lean::integer_sequence<int>::size() == 0, "");
+static_assert(lean::integer_sequence<int, 0>::size() == 1, "");
+static_assert(lean::integer_sequence<int, 0, 1>::size() == 2, "");
+static_assert(lean::integer_sequence<int, 0, 1, 2>::size() == 3, "");
+
+static_assert(std::is_same<lean::make_integer_sequence<int, 0>, lean::integer_sequence<int>>::value, "");
+static_assert(std::is_same<lean::make_integer_sequence<int, 1>, lean::integer_sequence<int, 0>>::value, "");
+static_assert(std::is_same<lean::make_integer_sequence<int, 2>, lean::integer_sequence<int, 0, 1>>::value, "");
+static_assert(std::is_same<lean::make_integer_sequence<int, 3>, lean::integer_sequence<int, 0, 1, 2>>::value, "");
+static_assert(std::is_same<lean::make_integer_sequence<int, 4>, lean::integer_sequence<int, 0, 1, 2, 3>>::value, "");
+
+} // namespace integer_sequence_suite
+
+//-----------------------------------------------------------------------------
+
+namespace index_sequence_suite
+{
+
+static_assert(std::is_same<typename lean::index_sequence<>::value_type, std::size_t>::value, "");
+
+static_assert(lean::index_sequence<>::size() == 0, "");
+static_assert(lean::index_sequence<0>::size() == 1, "");
+static_assert(lean::index_sequence<0, 1>::size() == 2, "");
+static_assert(lean::index_sequence<0, 1, 2>::size() == 3, "");
+
+static_assert(std::is_same<lean::make_index_sequence<0>, lean::index_sequence<>>::value, "");
+static_assert(std::is_same<lean::make_index_sequence<1>, lean::index_sequence<0>>::value, "");
+static_assert(std::is_same<lean::make_index_sequence<2>, lean::index_sequence<0, 1>>::value, "");
+static_assert(std::is_same<lean::make_index_sequence<3>, lean::index_sequence<0, 1, 2>>::value, "");
+static_assert(std::is_same<lean::make_index_sequence<4>, lean::index_sequence<0, 1, 2, 3>>::value, "");
+
+static_assert(std::is_same<lean::index_sequence_for<int>, lean::index_sequence<0>>::value, "");
+static_assert(std::is_same<lean::index_sequence_for<int, unsigned>, lean::index_sequence<0, 1>>::value, "");
+static_assert(std::is_same<lean::index_sequence_for<int, unsigned, float>, lean::index_sequence<0, 1, 2>>::value, "");
+
+} // namespace index_sequence_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     exchange_suite::run();
