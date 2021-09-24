@@ -91,10 +91,6 @@ static_assert(!lean::is_mutable_reference<const nontrivial[4]>::value, "no");
 static_assert(!lean::is_mutable_reference<const nontrivial(&)[4]>::value, "no");
 static_assert(!lean::is_mutable_reference<const nontrivial(&&)[4]>::value, "no");
 
-void run()
-{
-}
-
 } // namespace is_mutable_reference_suite
 
 //-----------------------------------------------------------------------------
@@ -176,17 +172,11 @@ static_assert(std::is_same<lean::decay_forward_t<const nontrivial(&&)[4]>, const
 static_assert(std::is_same<lean::decay_forward_t<nontrivial *>, nontrivial *>::value, "pointer");
 static_assert(std::is_same<lean::decay_forward_t<const nontrivial *>, const nontrivial *>::value, "pointer");
 
-void run()
-{
-}
-
 } // namespace decay_forward_suite
 
 //-----------------------------------------------------------------------------
 
 int main()
 {
-    is_mutable_reference_suite::run();
-    decay_forward_suite::run();
     return 0;
 }
