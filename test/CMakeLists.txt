@@ -26,6 +26,9 @@ lean_test(atomic_suite atomic_suite.cpp)
 # checked
 lean_test(checked_suite checked_suite.cpp)
 
+# checked
+lean_test(function_type_suite function_type_suite.cpp)
+
 # throw_exception
 lean_test(throw_suite throw_suite.cpp)
 
