@@ -22,13 +22,13 @@ namespace lean
 // Similar to decay-copy [expos.only.func]
 
 template <typename T>
-constexpr auto decay_forward(typename std::remove_reference<T>::type& value) noexcept -> decay_forward_t<T>
+constexpr auto decay_forward(remove_reference_t<T>& value) noexcept -> decay_forward_t<T>
 {
     return static_cast<decay_forward_t<T>>(value);
 }
 
 template <typename T>
-constexpr auto decay_forward(typename std::remove_reference<T>::type&& value) noexcept -> decay_forward_t<T>
+constexpr auto decay_forward(remove_reference_t<T>&& value) noexcept -> decay_forward_t<T>
 {
     return static_cast<decay_forward_t<T>>(value);
 }

@@ -44,8 +44,8 @@ public:
     //! @brief Creates object with given value.
 
     template <typename T,
-              typename DecayT = typename std::decay<T>::type,
-              typename = typename std::enable_if<!std::is_same<unique_any, DecayT>::value>::type>
+              typename DecayT = decay_t<T>,
+              typename = enable_if_t<!std::is_same<unique_any, DecayT>::value>>
     unique_any(T&& value)
         : interface(&table<DecayT>::instance())
     {
@@ -57,8 +57,8 @@ public:
     //! @brief Creates object with in-place construction of value.
     template <typename T,
               typename... Args,
-              typename DecayT = typename std::decay<T>::type,
-              typename = typename std::enable_if<std::is_constructible<DecayT, Args...>::value>::type>
+              typename DecayT = decay_t<T>,
+              typename = enable_if_t<std::is_constructible<DecayT, Args...>::value>>
     explicit unique_any(lean::in_place_type_t<T>, Args&&... args)
         : interface(&table<DecayT>::instance())
     {
@@ -88,9 +88,9 @@ public:
     //! @brief Assigns given value of deduced type.
 
     template <typename T,
-              typename DecayT = typename std::decay<T>::type,
-              typename = typename std::enable_if<!std::is_same<unique_any, DecayT>::value &&
-                                                 std::is_copy_constructible<DecayT>::value>::type>
+              typename DecayT = decay_t<T>,
+              typename = enable_if_t<!std::is_same<unique_any, DecayT>::value &&
+                                     std::is_copy_constructible<DecayT>::value>>
     unique_any& operator=(T&& value)
     {
         unique_any(std::forward<T>(value)).swap(*this);
@@ -111,14 +111,14 @@ public:
     template <typename T>
     bool holds() const noexcept
     {
-        return overload<typename std::decay<T>::type>::holds(*this);
+        return overload<decay_t<T>>::holds(*this);
     }
 
     //! @brief Recreates object
 
     template <typename T,
               typename... Args,
-              typename DecayT = typename std::decay<T>::type>
+              typename DecayT = decay_t<T>>
     DecayT& emplace(Args&&... args)
     {
         unique_any(T{ std::forward<Args>(args)... }).swap(*this);
@@ -202,7 +202,7 @@ protected:
     // In-place storage for small-object optimization
     template <typename T>
     struct overload<T,
-                    typename std::enable_if<(sizeof(T) <= sizeof(storage.buffer)) && lean::is_trivially_move_constructible<T>::value>::type>
+                    enable_if_t<(sizeof(T) <= sizeof(storage.buffer)) && is_trivially_move_constructible<T>::value>>
     {
         static T* cast(storage_type& self) noexcept
         {
