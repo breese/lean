@@ -35,13 +35,13 @@ static_assert(std::is_same<function_type_t<void(*)()>, void()>::value, "");
 static_assert(std::is_same<function_type_t<void(&)()>, void()>::value, "");
 static_assert(std::is_same<function_type_t<void(&&)()>, void()>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)()>, void()>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() &>, void()>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() &&>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)(), my_class *>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() &, my_class *>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() &&, my_class *>, void()>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)() const>, void() const>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const &>, void() const>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const &&>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const, const my_class *>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const &, const my_class *>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const &&, const my_class *>, void() const>::value, "");
 
 #if __cpp_noexcept_function_type
 
@@ -57,13 +57,13 @@ static_assert(std::is_same<function_type_t<void(*)() noexcept>, void() noexcept>
 static_assert(std::is_same<function_type_t<void(&)() noexcept>, void() noexcept>::value, "");
 static_assert(std::is_same<function_type_t<void(&&)() noexcept>, void() noexcept>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)() noexcept>, void() noexcept>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() & noexcept>, void() noexcept>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() && noexcept>, void() noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() noexcept, my_class *>, void() noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() & noexcept, my_class *>, void() noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() && noexcept, my_class *>, void() noexcept>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)() const noexcept>, void() const noexcept>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const & noexcept>, void() const noexcept>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const && noexcept>, void() const noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const noexcept, const my_class *>, void() const noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const & noexcept, const my_class *>, void() const noexcept>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const && noexcept, const my_class *>, void() const noexcept>::value, "");
 
 
 #else
@@ -80,13 +80,13 @@ static_assert(std::is_same<function_type_t<void(*)() noexcept>, void()>::value, 
 static_assert(std::is_same<function_type_t<void(&)() noexcept>, void()>::value, "");
 static_assert(std::is_same<function_type_t<void(&&)() noexcept>, void()>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)() noexcept>, void()>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() & noexcept>, void()>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() && noexcept>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() noexcept, my_class *>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() & noexcept, my_class *>, void()>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() && noexcept, my_class *>, void()>::value, "");
 
-static_assert(std::is_same<function_type_t<void(my_class::*)() const noexcept>, void() const>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const & noexcept>, void() const>::value, "");
-static_assert(std::is_same<function_type_t<void(my_class::*)() const && noexcept>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const noexcept, const my_class *>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const & noexcept, const my_class *>, void() const>::value, "");
+static_assert(std::is_same<function_type_t<void(my_class::*)() const && noexcept, const my_class *>, void() const>::value, "");
 
 #endif
 
@@ -119,13 +119,13 @@ static_assert(std::is_same<result_type_t<void(*)()>, void>::value, "");
 static_assert(std::is_same<result_type_t<void(&)()>, void>::value, "");
 static_assert(std::is_same<result_type_t<void(&&)()>, void>::value, "");
 
-static_assert(std::is_same<result_type_t<void(my_class::*)()>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() &>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() &&>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)(), my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() &, my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() &&, my_class *>, void>::value, "");
 
-static_assert(std::is_same<result_type_t<void(my_class::*)() const>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() const &>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() const &&>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const, const my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const &, const my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const &&, const my_class *>, void>::value, "");
 
 static_assert(std::is_same<result_type_t<void() noexcept>, void>::value, "");
 static_assert(std::is_same<result_type_t<void() & noexcept>, void>::value, "");
@@ -139,13 +139,13 @@ static_assert(std::is_same<result_type_t<void(*)() noexcept>, void>::value, "");
 static_assert(std::is_same<result_type_t<void(&)() noexcept>, void>::value, "");
 static_assert(std::is_same<result_type_t<void(&&)() noexcept>, void>::value, "");
 
-static_assert(std::is_same<result_type_t<void(my_class::*)() noexcept>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() & noexcept>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() && noexcept>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() noexcept, my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() & noexcept, my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() && noexcept, my_class *>, void>::value, "");
 
-static_assert(std::is_same<result_type_t<void(my_class::*)() const noexcept>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() const & noexcept>, void>::value, "");
-static_assert(std::is_same<result_type_t<void(my_class::*)() const && noexcept>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const noexcept, const my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const & noexcept, const my_class *>, void>::value, "");
+static_assert(std::is_same<result_type_t<void(my_class::*)() const && noexcept, const my_class *>, void>::value, "");
 
 static_assert(std::is_same<result_type_t<auto() -> void>, void>::value, "");
 static_assert(std::is_same<result_type_t<auto(*)() -> void>, void>::value, "");
@@ -177,13 +177,13 @@ static_assert(!is_noexcept<void(*)()>::value, "");
 static_assert(!is_noexcept<void(&)()>::value, "");
 static_assert(!is_noexcept<void(&&)()>::value, "");
 
-static_assert(!is_noexcept<void(my_class::*)()>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() &>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() &&>::value, "");
+static_assert(!is_noexcept<void(my_class::*)(), my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() &, my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() &&, my_class *>::value, "");
 
-static_assert(!is_noexcept<void(my_class::*)() const>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() const &>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() const &&>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const, const my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const &, const my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const &&, const my_class *>::value, "");
 
 #if __cpp_noexcept_function_type
 
@@ -199,13 +199,13 @@ static_assert(is_noexcept<void(*)() noexcept>::value, "");
 static_assert(is_noexcept<void(&)() noexcept>::value, "");
 static_assert(is_noexcept<void(&&)() noexcept>::value, "");
 
-static_assert(is_noexcept<void(my_class::*)() noexcept>::value, "");
-static_assert(is_noexcept<void(my_class::*)() & noexcept>::value, "");
-static_assert(is_noexcept<void(my_class::*)() && noexcept>::value, "");
+static_assert(is_noexcept<void(my_class::*)() noexcept, my_class *>::value, "");
+static_assert(is_noexcept<void(my_class::*)() & noexcept, my_class *>::value, "");
+static_assert(is_noexcept<void(my_class::*)() && noexcept, my_class *>::value, "");
 
-static_assert(is_noexcept<void(my_class::*)() const noexcept>::value, "");
-static_assert(is_noexcept<void(my_class::*)() const & noexcept>::value, "");
-static_assert(is_noexcept<void(my_class::*)() const && noexcept>::value, "");
+static_assert(is_noexcept<void(my_class::*)() const noexcept, const my_class *>::value, "");
+static_assert(is_noexcept<void(my_class::*)() const & noexcept, const my_class *>::value, "");
+static_assert(is_noexcept<void(my_class::*)() const && noexcept, const my_class *>::value, "");
 
 #else
 
@@ -221,13 +221,13 @@ static_assert(!is_noexcept<void(*)() noexcept>::value, "");
 static_assert(!is_noexcept<void(&)() noexcept>::value, "");
 static_assert(!is_noexcept<void(&&)() noexcept>::value, "");
 
-static_assert(!is_noexcept<void(my_class::*)() noexcept>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() & noexcept>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() && noexcept>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() noexcept, my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() & noexcept, my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() && noexcept, my_class *>::value, "");
 
-static_assert(!is_noexcept<void(my_class::*)() const noexcept>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() const & noexcept>::value, "");
-static_assert(!is_noexcept<void(my_class::*)() const && noexcept>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const noexcept, const my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const & noexcept, const my_class *>::value, "");
+static_assert(!is_noexcept<void(my_class::*)() const && noexcept, const my_class *>::value, "");
 
 #endif
 
@@ -252,13 +252,13 @@ static_assert(!is_const<void(*)()>::value, "");
 static_assert(!is_const<void(&)()>::value, "");
 static_assert(!is_const<void(&&)()>::value, "");
 
-static_assert(!is_const<void(my_class::*)()>::value, "");
-static_assert(!is_const<void(my_class::*)() &>::value, "");
-static_assert(!is_const<void(my_class::*)() &&>::value, "");
+static_assert(!is_const<void(my_class::*)(), my_class *>::value, "");
+static_assert(!is_const<void(my_class::*)() &, my_class *>::value, "");
+static_assert(!is_const<void(my_class::*)() &&, my_class *>::value, "");
 
-static_assert(is_const<void(my_class::*)() const>::value, "");
-static_assert(is_const<void(my_class::*)() const &>::value, "");
-static_assert(is_const<void(my_class::*)() const &&>::value, "");
+static_assert(is_const<void(my_class::*)() const, const my_class *>::value, "");
+static_assert(is_const<void(my_class::*)() const &, const my_class *>::value, "");
+static_assert(is_const<void(my_class::*)() const &&, const my_class *>::value, "");
 
 static_assert(!is_const<void() noexcept>::value, "");
 static_assert(!is_const<void() & noexcept>::value, "");
@@ -272,13 +272,13 @@ static_assert(!is_const<void(*)() noexcept>::value, "");
 static_assert(!is_const<void(&)() noexcept>::value, "");
 static_assert(!is_const<void(&&)() noexcept>::value, "");
 
-static_assert(!is_const<void(my_class::*)() noexcept>::value, "");
-static_assert(!is_const<void(my_class::*)() & noexcept>::value, "");
-static_assert(!is_const<void(my_class::*)() && noexcept>::value, "");
+static_assert(!is_const<void(my_class::*)() noexcept, my_class *>::value, "");
+static_assert(!is_const<void(my_class::*)() & noexcept, my_class *>::value, "");
+static_assert(!is_const<void(my_class::*)() && noexcept, my_class *>::value, "");
 
-static_assert(is_const<void(my_class::*)() const noexcept>::value, "");
-static_assert(is_const<void(my_class::*)() const & noexcept>::value, "");
-static_assert(is_const<void(my_class::*)() const && noexcept>::value, "");
+static_assert(is_const<void(my_class::*)() const noexcept, const my_class *>::value, "");
+static_assert(is_const<void(my_class::*)() const & noexcept, const my_class *>::value, "");
+static_assert(is_const<void(my_class::*)() const && noexcept, const my_class *>::value, "");
 
 } // namespace is_const_suite
 

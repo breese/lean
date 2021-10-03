@@ -17,6 +17,24 @@ namespace lean
 {
 
 //-----------------------------------------------------------------------------
+// add_pointer
+
+using std::add_pointer;
+
+using std::add_rvalue_reference;
+
+#if __cpp_lib_transformation_trait_aliases >= 201304L
+
+using std::add_pointer_t;
+
+#else
+
+template <typename T>
+using add_pointer_t = typename add_pointer<T>::type;
+
+#endif
+
+//-----------------------------------------------------------------------------
 // add_rvalue_reference
 
 using std::add_rvalue_reference;
