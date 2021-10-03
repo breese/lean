@@ -11,6 +11,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <lean/type_traits.hpp>
+
 namespace lean
 {
 namespace v1
@@ -22,7 +24,7 @@ namespace detail
 
 template <typename F, typename...>
 struct function_type
-    : public function_type<decltype(&F::operator())>
+    : public function_type<decltype(&decay_t<F>::operator())>
 {
 };
 
@@ -245,21 +247,21 @@ struct function_type<R(Class::*)(Args...) const && noexcept>
 //-----------------------------------------------------------------------------
 // Convenience
 
-template <typename F>
-using function_type_t = typename function_type<F>::type;
+template <typename F, typename... Args>
+using function_type_t = typename function_type<F, Args...>::type;
 
-template <typename F>
-using result_type_t = typename function_type<F>::result_type;
+template <typename F, typename... Args>
+using result_type_t = typename function_type<F, Args...>::result_type;
 
-template <typename F>
+template <typename F, typename... Args>
 struct is_noexcept
-    : public std::integral_constant<bool, function_type<F>::is_noexcept>
+    : public std::integral_constant<bool, function_type<F, Args...>::is_noexcept>
 {
 };
 
-template <typename F>
+template <typename F, typename... Args>
 struct is_const
-    : public std::integral_constant<bool, function_type<F>::is_const>
+    : public std::integral_constant<bool, function_type<F, Args...>::is_const>
 {
 };
 
