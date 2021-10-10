@@ -17,26 +17,11 @@ function(lean_test name)
   add_test(${name} ${EXECUTABLE_OUTPUT_PATH}/${name})
 endfunction()
 
-# any
 lean_test(any_suite any_suite.cpp)
-
-# atomic
 lean_test(atomic_suite atomic_suite.cpp)
-
-# checked
 lean_test(checked_suite checked_suite.cpp)
-
-# checked
-lean_test(function_type_suite function_type_suite.cpp)
-
-# throw_exception
+lean_test(invoke_suite invoke_suite.cpp)
 lean_test(throw_suite throw_suite.cpp)
-
-# tuple
 lean_test(tuple_suite tuple_suite.cpp)
-
-# type_traits
 lean_test(type_traits_suite type_traits_suite.cpp)
-
-# utility
 lean_test(utility_suite utility_suite.cpp)

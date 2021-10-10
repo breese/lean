@@ -11,92 +11,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <type_traits>
+#include <lean/detail/type_traits.hpp>
 
 namespace lean
 {
-
-//-----------------------------------------------------------------------------
-// add_pointer
-
-using std::add_pointer;
-
-using std::add_rvalue_reference;
-
-#if __cpp_lib_transformation_trait_aliases >= 201304L
-
-using std::add_pointer_t;
-
-#else
-
-template <typename T>
-using add_pointer_t = typename add_pointer<T>::type;
-
-#endif
-
-//-----------------------------------------------------------------------------
-// add_rvalue_reference
-
-using std::add_rvalue_reference;
-
-#if __cpp_lib_transformation_trait_aliases >= 201304L
-
-using std::add_rvalue_reference_t;
-
-#else
-
-template <typename T>
-using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
-
-#endif
-
-//-----------------------------------------------------------------------------
-// decay
-
-using std::decay;
-
-#if __cpp_lib_transformation_trait_aliases >= 201304L
-
-using std::decay_t;
-
-#else
-
-template <typename T>
-using decay_t = typename std::decay<T>::type;
-
-#endif
-
-//-----------------------------------------------------------------------------
-// enable_if
-
-using std::enable_if;
-
-#if __cpp_lib_transformation_trait_aliases >= 201304L
-
-using std::enable_if_t;
-
-#else
-
-template <bool B, typename T = void>
-using enable_if_t = typename std::enable_if<B, T>::type;
-
-#endif
-
-//-----------------------------------------------------------------------------
-// remove_reference
-
-using std::remove_reference;
-
-#if __cpp_lib_transformation_trait_aliases >= 201304L
-
-using std::remove_reference_t;
-
-#else
-
-template <typename T>
-using remove_reference_t = typename std::remove_reference<T>::type;
-
-#endif
 
 //-----------------------------------------------------------------------------
 // is_mutable_reference
@@ -138,5 +56,78 @@ struct is_trivially_move_constructible<void>
     : public std::false_type {};
 
 } // namespace lean
+
+//-----------------------------------------------------------------------------
+// invoke traits
+
+#if __cpp_lib_is_invocable >= 201703L
+
+namespace lean
+{
+
+using std::is_invocable;
+using std::is_nothrow_invocable;
+using std::invoke_result;
+using std::invoke_result_t;
+
+} // namespace lean
+
+#else
+
+#include <lean/detail/invoke_traits.hpp>
+
+namespace lean
+{
+namespace v1
+{
+
+template <typename F, typename... Args>
+struct is_invocable
+    : public detail::invoke_traits<F, Args...>::type
+{
+};
+
+template <typename F, typename... Args>
+struct is_nothrow_invocable
+    : public std::integral_constant<bool,
+                                    is_invocable<F, Args...>::value &&
+                                    detail::invoke_traits<F, Args...>::is_nothrow>
+{
+};
+
+namespace detail
+{
+
+template <typename, typename = void>
+struct invoke_result;
+
+template <typename F, typename... Args>
+struct invoke_result<pack<F, Args...>,
+                     enable_if_t<is_invocable<F, Args...>::value>>
+{
+    using type = typename invoke_traits<F, Args...>::result_type;
+};
+
+} // namespace detail
+
+template <typename F, typename... Args>
+struct invoke_result
+    : detail::invoke_result<pack<F, Args...>>
+{
+};
+
+template <typename F, typename... Args>
+using invoke_result_t = typename invoke_result<F, Args...>::type;
+
+} // namespace v1
+
+using v1::is_invocable;
+using v1::is_nothrow_invocable;
+using v1::invoke_result;
+using v1::invoke_result_t;
+
+} // namespace lean
+
+#endif
 
 #endif // LEAN_TYPE_TRAITS_HPP
