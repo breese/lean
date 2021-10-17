@@ -81,34 +81,24 @@ namespace lean
 namespace v1
 {
 
+// Checks if function type can be invoked with given arguments.
+
 template <typename F, typename... Args>
 struct is_invocable
-    : public detail::invoke_traits<F, Args...>::type
+    : public detail::is_invocable<pack<F, Args...>>::type
 {
 };
+
+// Checks if function type can be invoked without throwing exceptions.
+//
+// The exception specification became part of the function type in C++17.
+// This check always returns false when compiled with earlier C++ standards.
 
 template <typename F, typename... Args>
 struct is_nothrow_invocable
-    : public std::integral_constant<bool,
-                                    is_invocable<F, Args...>::value &&
-                                    detail::invoke_traits<F, Args...>::is_nothrow>
+    : public detail::is_nothrow_invocable<pack<F, Args...>>::type
 {
 };
-
-namespace detail
-{
-
-template <typename, typename = void>
-struct invoke_result;
-
-template <typename F, typename... Args>
-struct invoke_result<pack<F, Args...>,
-                     enable_if_t<is_invocable<F, Args...>::value>>
-{
-    using type = typename invoke_traits<F, Args...>::result_type;
-};
-
-} // namespace detail
 
 template <typename F, typename... Args>
 struct invoke_result

@@ -60,17 +60,23 @@ using remove_reference_t = typename remove_reference<T>::type;
 
 //-----------------------------------------------------------------------------
 // void_t
+//
+// std::void_t is defined as
+//
+//   template <typename...> using void_t = void
+//
+// This does not always work well with SFINAE (see CWG 1558)
 
-#if __cpp_lib_void_t >= 201411L
-
-using std::void_t;
-
-#else
+namespace detail
+{
 
 template <typename...>
-using void_t = void;
+struct make_void { using type = void; };
 
-#endif
+} // namespace detail
+
+template <typename... Ts>
+using void_t = typename detail::make_void<Ts...>::type;
 
 //-----------------------------------------------------------------------------
 // Extension: Parameter pack
