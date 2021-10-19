@@ -14,101 +14,52 @@
 #include <new>
 #include <memory>
 #include <lean/detail/config.hpp>
-
-#if __cplusplus >= LEAN_CXX17
-# define LEAN_WITH_STD_LAUNDER 1
-#endif
-
-#if __cplusplus >= LEAN_CXX20
-# define LEAN_WITH_STD_CONSTRUCT_AT 1
-#endif
-
-#if __cpp_lib_raw_memory_algorithms >= 201606L
-# define LEAN_WITH_STD_DESTROY_AT 1
-#endif
-
-#if __cpp_lib_constexpr_dynamic_alloc >= 201811L
-# define LEAN_CONSTEXPR_ALLOCATOR constexpr
-#else
-# define LEAN_CONSTEXPR_ALLOCATOR
-#endif
+#include <lean/detail/type_traits.hpp>
 
 namespace lean
 {
-
-//-----------------------------------------------------------------------------
-
-namespace detail
-{
-
-template <typename T>
-constexpr T* launder(T *ptr) noexcept
-{
-#if LEAN_WITH_STD_LAUNDER
-    return std::launder(ptr);
-#else
-    return ptr;
-#endif
-}
-
-template <typename Allocator, typename... Args>
-LEAN_CONSTEXPR_ALLOCATOR
-void construct_at(Allocator& allocator,
-                  typename Allocator::pointer location,
-                  Args&&... args)
-{
-    std::allocator_traits<Allocator>::construct(allocator, location, std::forward<Args>(args)...);
-}
-
-template <typename Allocator>
-LEAN_CONSTEXPR_ALLOCATOR
-void destroy_at(Allocator& allocator,
-                typename Allocator::pointer location)
-{
-    std::allocator_traits<Allocator>::destroy(allocator, location);
-}
-
-} // namespace detail
-
-//-----------------------------------------------------------------------------
-
 namespace v1
 {
 
-#if LEAN_WITH_STD_CONSTRUCT_AT
+//-----------------------------------------------------------------------------
+// construct_at
+
+#if __cpp_lib_constexpr_dynamic_alloc >= 201811L
 
 using std::construct_at;
 
 #else
 
 template <typename T, typename... Args>
-LEAN_CONSTEXPR_ALLOCATOR
-T* construct_at(T* ptr, Args&&... args)
+T* construct_at(T* ptr, Args&&... args) noexcept(std::is_nothrow_constructible<T, Args...>())
 {
-    std::allocator<T> allocator;
-    lean::detail::construct_at(allocator, ptr, std::forward<Args>(args)...);
-    return lean::detail::launder(ptr);
+    return ::new (const_cast<void*>(static_cast<const volatile void*>(ptr))) T{ std::forward<Args>(args)... };
 }
 
 #endif
 
-#if LEAN_WITH_STD_DESTROY_AT
+//-----------------------------------------------------------------------------
+// destroy_at
+
+#if __cpp_lib_raw_memory_algorithms >= 201606L
 
 using std::destroy_at;
 
 #else
 
 template <typename T>
-LEAN_CONSTEXPR_ALLOCATOR
 void destroy_at(T* ptr)
 {
-    std::allocator<T> allocator;
-    lean::detail::destroy_at(allocator, ptr);
+    ptr->~T();
 }
 
 #endif
 
 } // namespace v1
+
+using v1::construct_at;
+using v1::destroy_at;
+
 } // namespace lean
 
 #endif // LEAN_MEMORY_HPP
