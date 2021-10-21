@@ -25,6 +25,7 @@ using std::conditional;
 using std::decay;
 using std::enable_if;
 using std::is_same;
+using std::remove_const;
 using std::remove_reference;
 
 #if __cpp_lib_transformation_trait_aliases >= 201304L
@@ -34,6 +35,7 @@ using std::add_rvalue_reference_t;
 using std::conditional_t;
 using std::decay_t;
 using std::enable_if_t;
+using std::remove_const_t;
 using std::remove_reference_t;
 
 #else
@@ -54,7 +56,25 @@ template <bool B, typename T = void>
 using enable_if_t = typename enable_if<B, T>::type;
 
 template <typename T>
+using remove_const_t = typename remove_const<T>::type;
+
+template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
+
+#endif
+
+#if __cpp_lib_remove_cvref >= 201711L
+
+using std::remove_cvref;
+using std::remove_cvref_t;
+
+#else
+
+template <typename T>
+struct remove_cvref : public std::remove_cv<remove_reference_t<T>> {};
+
+template <typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
 
 #endif
 
@@ -77,12 +97,6 @@ struct make_void { using type = void; };
 
 template <typename... Ts>
 using void_t = typename detail::make_void<Ts...>::type;
-
-//-----------------------------------------------------------------------------
-// Extension: Parameter pack
-
-template <typename...>
-struct pack;
 
 } // namespace lean
 

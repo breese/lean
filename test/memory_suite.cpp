@@ -105,8 +105,101 @@ void run()
 
 //-----------------------------------------------------------------------------
 
+namespace inplace_storage_suite
+{
+
+using namespace lean::v1;
+
+static_assert(std::is_nothrow_default_constructible<inplace_storage<int>>(),
+              "default constructible");
+static_assert(!std::is_copy_constructible<inplace_storage<int>>(),
+              "not copyable");
+static_assert(!std::is_move_constructible<inplace_storage<int>>(),
+              "not movable");
+
+void api_construct() {
+    {
+        inplace_storage<int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace::destroy(&storage);
+    }
+    {
+        inplace_storage<const int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace::destroy(&storage);
+    }
+}
+
+void api_copy() {
+    {
+        inplace_storage<int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace_storage<int> clone;
+        inplace::construct(&clone, storage);
+        assert(*storage.data() == 42);
+        assert(*clone.data() == 42);
+        inplace::destroy(&clone);
+        inplace::destroy(&storage);
+    }
+    {
+        inplace_storage<const int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace_storage<const int> clone;
+        inplace::construct(&clone, storage);
+        assert(*storage.data() == 42);
+        assert(*clone.data() == 42);
+        inplace::destroy(&clone);
+        inplace::destroy(&storage);
+    }
+}
+
+void api_move() {
+    {
+        inplace_storage<int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace_storage<int> clone;
+        inplace::construct(&clone, std::move(storage));
+        assert(*clone.data() == 42);
+        inplace::destroy(&clone);
+        inplace::destroy(&storage);
+    }
+    {
+        inplace_storage<const int> storage;
+        using inplace = inplace_traits<decltype(storage)>;
+        inplace::construct(&storage, 42);
+        assert(*storage.data() == 42);
+        inplace_storage<const int> clone;
+        inplace::construct(&clone, std::move(storage));
+        assert(*clone.data() == 42);
+        inplace::destroy(&clone);
+        inplace::destroy(&storage);
+    }
+}
+
+void run()
+{
+    api_construct();
+    api_copy();
+    api_move();
+}
+
+} // namespace inplace_storage_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     construct_suite::run();
+    inplace_storage_suite::run();
     return 0;
 }
