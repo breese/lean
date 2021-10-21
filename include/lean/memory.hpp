@@ -99,6 +99,8 @@ struct inplace_storage {
 
     constexpr inplace_storage() noexcept {};
 
+    // Accessors
+
     template <typename R = value_type>
     constexpr R* data() noexcept
     {
@@ -115,14 +117,13 @@ private:
     inplace_storage(const inplace_storage&) = delete;
     inplace_storage(inplace_storage&&) = delete;
 
-    // Accessors
-
     union member {
         constexpr member() noexcept = default;
         constexpr member(const member&) noexcept = default;
         constexpr member(member&&) noexcept = default;
 
-        enum nullable { null } nothing = null;
+        // Dummy to prevent value from being default-initialized
+        unsigned char dummy {};
         value_type value;
     } member;
 };
@@ -168,6 +169,8 @@ struct inplace_traits<inplace_storage<T>>
     {
         construct(self, std::move(*other.data()));
     }
+
+    // Destroys inplace value.
 
     static constexpr void destroy(storage_type* self) noexcept(std::is_nothrow_destructible<T>())
     {
