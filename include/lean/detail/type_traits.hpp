@@ -19,6 +19,7 @@ namespace lean
 //-----------------------------------------------------------------------------
 // Aliases [N3655]
 
+using std::add_const;
 using std::add_pointer;
 using std::add_rvalue_reference;
 using std::conditional;
@@ -30,6 +31,7 @@ using std::remove_reference;
 
 #if __cpp_lib_transformation_trait_aliases >= 201304L
 
+using std::add_const_t;
 using std::add_pointer_t;
 using std::add_rvalue_reference_t;
 using std::conditional_t;
@@ -39,6 +41,9 @@ using std::remove_const_t;
 using std::remove_reference_t;
 
 #else
+
+template <typename T>
+using add_const_t = typename add_const<T>::type;
 
 template <typename T>
 using add_pointer_t = typename add_pointer<T>::type;

@@ -119,70 +119,68 @@ static_assert(!std::is_move_constructible<inplace_storage<int>>(),
 
 void api_construct() {
     {
-        inplace_storage<int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
+        inplace_storage<int> storage(42);
         assert(*storage.data() == 42);
-        inplace::destroy(&storage);
+        destroy_at(storage.data());
+    }
+    {
+        inplace_storage<int> storage;
+        construct_at(storage.data(), 42);
+        assert(*storage.data() == 42);
+        destroy_at(storage.data());
+    }
+    {
+        inplace_storage<const int> storage(42);
+        assert(*storage.data() == 42);
+        destroy_at(storage.data());
     }
     {
         inplace_storage<const int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
+        construct_at(storage.data(), 42);
         assert(*storage.data() == 42);
-        inplace::destroy(&storage);
+        destroy_at(storage.data());
     }
 }
 
 void api_copy() {
     {
-        inplace_storage<int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
-        assert(*storage.data() == 42);
+        inplace_storage<int> storage(42);
         inplace_storage<int> clone;
-        inplace::construct(&clone, storage);
+        construct_at(clone.data(), *storage.data());
         assert(*storage.data() == 42);
         assert(*clone.data() == 42);
-        inplace::destroy(&clone);
-        inplace::destroy(&storage);
+        destroy_at(clone.data());
+        destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
-        assert(*storage.data() == 42);
+        inplace_storage<const int> storage(42);
         inplace_storage<const int> clone;
-        inplace::construct(&clone, storage);
+        construct_at(clone.data(), *storage.data());
         assert(*storage.data() == 42);
         assert(*clone.data() == 42);
-        inplace::destroy(&clone);
-        inplace::destroy(&storage);
+        destroy_at(clone.data());
+        destroy_at(storage.data());
     }
 }
 
 void api_move() {
     {
-        inplace_storage<int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
+        inplace_storage<int> storage(42);
         assert(*storage.data() == 42);
         inplace_storage<int> clone;
-        inplace::construct(&clone, std::move(storage));
+        construct_at(clone.data(), std::move(*storage.data()));
         assert(*clone.data() == 42);
-        inplace::destroy(&clone);
-        inplace::destroy(&storage);
+        destroy_at(clone.data());
+        destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage;
-        using inplace = inplace_traits<decltype(storage)>;
-        inplace::construct(&storage, 42);
+        inplace_storage<const int> storage(42);
         assert(*storage.data() == 42);
         inplace_storage<const int> clone;
-        inplace::construct(&clone, std::move(storage));
+        construct_at(clone.data(), std::move(*storage.data()));
         assert(*clone.data() == 42);
-        inplace::destroy(&clone);
-        inplace::destroy(&storage);
+        destroy_at(clone.data());
+        destroy_at(storage.data());
     }
 }
 
