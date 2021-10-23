@@ -117,20 +117,22 @@ static_assert(!std::is_copy_constructible<inplace_storage<int>>(),
 static_assert(!std::is_move_constructible<inplace_storage<int>>(),
               "not movable");
 
-void api_construct() {
+static_assert(std::is_same<typename inplace_storage<int>::value_type, int>(), "");
+static_assert(std::is_same<typename inplace_storage<const int>::value_type, int>(), "");
+
+void api_construct_default()
+{
     {
-        inplace_storage<int> storage(42);
-        assert(*storage.data() == 42);
-        destroy_at(storage.data());
+        inplace_storage<int> storage;
+        (void)storage; // Uninitialized, nothing to destroy
+    }
+    {
+        inplace_storage<const int> storage;
+        (void)storage; // Uninitialized, nothing to destroy
     }
     {
         inplace_storage<int> storage;
         construct_at(storage.data(), 42);
-        assert(*storage.data() == 42);
-        destroy_at(storage.data());
-    }
-    {
-        inplace_storage<const int> storage(42);
         assert(*storage.data() == 42);
         destroy_at(storage.data());
     }
@@ -142,7 +144,22 @@ void api_construct() {
     }
 }
 
-void api_copy() {
+void api_construct_value()
+{
+    {
+        inplace_storage<int> storage(42);
+        assert(*storage.data() == 42);
+        destroy_at(storage.data());
+    }
+    {
+        inplace_storage<const int> storage(42);
+        assert(*storage.data() == 42);
+        destroy_at(storage.data());
+    }
+}
+
+void api_copy()
+{
     {
         inplace_storage<int> storage(42);
         inplace_storage<int> clone;
@@ -163,7 +180,8 @@ void api_copy() {
     }
 }
 
-void api_move() {
+void api_move()
+{
     {
         inplace_storage<int> storage(42);
         assert(*storage.data() == 42);
@@ -186,7 +204,8 @@ void api_move() {
 
 void run()
 {
-    api_construct();
+    api_construct_default();
+    api_construct_value();
     api_copy();
     api_move();
 }
@@ -195,9 +214,73 @@ void run()
 
 //-----------------------------------------------------------------------------
 
+namespace inplace_union_suite
+{
+
+using namespace lean::v1;
+
+static_assert(std::is_nothrow_default_constructible<inplace_union<int>>(),
+              "default constructible");
+static_assert(std::is_nothrow_default_constructible<inplace_union<int, double>>(),
+              "default constructible");
+static_assert(!std::is_copy_constructible<inplace_union<int>>(),
+              "not copyable");
+static_assert(!std::is_move_constructible<inplace_union<int>>(),
+              "not movable");
+
+static_assert(std::is_same<typename inplace_union<int>::value_type, int>(), "");
+static_assert(std::is_same<typename inplace_union<char, int>::value_type, int>(), "");
+static_assert(std::is_same<typename inplace_union<char, int, double>::value_type, double>(), "");
+
+void api_construct_default()
+{
+    {
+        inplace_union<char, int, double> storage;
+        (void)storage; // Uninitialized, nothing to destroy
+    }
+    {
+        inplace_union<char, int, double> storage;
+        construct_at(storage.data<char>(), 'A');
+        assert(*storage.data<char>() == 'A');
+        destroy_at(storage.data<char>());
+    }
+    {
+        inplace_union<char, int, double> storage;
+        construct_at(storage.data<int>(), 42);
+        assert(*storage.data<int>() == 42);
+        destroy_at(storage.data<int>());
+    }
+    {
+        inplace_union<char, int, double> storage;
+        construct_at(storage.data<double>(), 42.);
+        assert(*storage.data<double>() == 42.);
+        destroy_at(storage.data<double>());
+    }
+}
+
+void api_construct_value()
+{
+    {
+        inplace_union<char, int, double> storage(42); // Stored as default value_type
+        assert(*storage.data<decltype(storage)::value_type>() == 42);
+        destroy_at(storage.data<decltype(storage)::value_type>());
+    }
+}
+
+void run()
+{
+    api_construct_default();
+    api_construct_value();
+}
+
+} // namespace inplace_union_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     construct_suite::run();
     inplace_storage_suite::run();
+    inplace_union_suite::run();
     return 0;
 }

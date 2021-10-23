@@ -89,22 +89,24 @@ struct inplace_storage {
 
     template <typename R = value_type>
     LEAN_CONSTEXPR_CXX14
-    auto data() noexcept -> enable_if_t<detail::is_inplace_compatible<T, R>::value,
-                                        add_pointer_t<R>>
+    auto data() noexcept
+        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value,
+                       add_pointer_t<R>>
     {
         return reinterpret_cast<add_pointer_t<R>>(&member.value);
     }
 
     template <typename R = value_type>
-    LEAN_CONSTEXPR_CXX14
-    auto data() const noexcept -> enable_if_t<detail::is_inplace_compatible<T, R>::value,
-                                              add_pointer_t<add_const_t<R>>>
+    constexpr auto data() const noexcept
+        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value,
+                       add_pointer_t<add_const_t<R>>>
     {
         return reinterpret_cast<add_pointer_t<add_const_t<R>>>(&member.value);
     }
 
 private:
-    union member {
+    union member
+    {
         constexpr member() noexcept = default;
         constexpr member(const member&) noexcept = delete;
         constexpr member(member&&) noexcept = delete;
@@ -123,6 +125,48 @@ private:
     } member;
 };
 
+template <typename... Types>
+struct inplace_union {
+    template <typename Lhs, typename Rhs>
+    struct greater_sizeof : public type_greater_with<type_sizeof, Lhs, Rhs> {};
+
+    using value_type = pack_fold<pack<Types...>, greater_sizeof>;
+
+    constexpr inplace_union() noexcept = default;
+
+    template <typename Arg0,
+              typename... Args,
+              typename = enable_if_t<!std::is_same<inplace_union, remove_cvref_t<Arg0>>::value>>
+    explicit constexpr inplace_union(Arg0&& arg0, Args&&... args)
+        : member(std::forward<Arg0>(arg0), std::forward<Args>(args)...)
+    {
+    }
+
+    // Accessors
+
+    template <typename R>
+    LEAN_CONSTEXPR_CXX14
+    auto data() noexcept
+        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
+                       pack_contains<pack<Types...>, R>::value,
+                       add_pointer_t<R>>
+    {
+        return member.template data<R>();
+    }
+
+    template <typename R>
+    constexpr auto data() const noexcept
+        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
+                       pack_contains<pack<Types...>, R>::value,
+                       add_pointer_t<add_const_t<R>>>
+    {
+        return member.template data<R>();
+    }
+
+private:
+    inplace_storage<value_type> member;
+};
+
 } // namespace v1
 
 //-----------------------------------------------------------------------------
@@ -130,6 +174,7 @@ private:
 using v1::construct_at;
 using v1::destroy_at;
 using v1::inplace_storage;
+using v1::inplace_union;
 
 } // namespace lean
 
