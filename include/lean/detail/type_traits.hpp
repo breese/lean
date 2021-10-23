@@ -130,17 +130,6 @@ using type_identity_t = typename type_identity<T>::type;
 //
 // type_front<bool, int, float> == bool
 
-namespace impl
-{
-
-template <typename...>
-struct type_front;
-
-template <typename T, typename... Tail>
-struct type_front<T, Tail...> { using type = T; };
-
-} // namespace impl
-
 template <typename T, typename...>
 struct type_front { using type = T; };
 
