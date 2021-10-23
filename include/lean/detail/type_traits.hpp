@@ -68,6 +68,9 @@ using remove_reference_t = typename remove_reference<T>::type;
 
 #endif
 
+//-----------------------------------------------------------------------------
+// remove_cvref [P0550]
+
 #if __cpp_lib_remove_cvref >= 201711L
 
 using std::remove_cvref;
@@ -84,7 +87,28 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
-// void_t
+// type_identity [P0887]
+
+#if __cpp_lib_type_identity >= 201806L
+
+using std::type_identity;
+using std::type_identity_t;
+
+#else
+
+template <typename T>
+struct type_identity
+{
+    using type = T;
+};
+
+template <typename T>
+using type_identity_t = typename type_identity<T>::type;
+
+#endif
+
+//-----------------------------------------------------------------------------
+// void_t [N3911]
 //
 // std::void_t is defined as
 //

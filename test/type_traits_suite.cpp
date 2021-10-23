@@ -25,6 +25,25 @@ struct nontrivial
 
 //-----------------------------------------------------------------------------
 
+namespace type_identity_suite
+{
+
+static_assert(std::is_same<lean::type_identity_t<void>, void>(), "");
+
+static_assert(std::is_same<lean::type_identity_t<int>, int>(), "");
+static_assert(std::is_same<lean::type_identity_t<int&>, int&>(), "");
+static_assert(std::is_same<lean::type_identity_t<int&&>, int&&>(), "");
+static_assert(std::is_same<lean::type_identity_t<const int>, const int>(), "");
+static_assert(std::is_same<lean::type_identity_t<const int&>, const int&>(), "");
+static_assert(std::is_same<lean::type_identity_t<const int&&>, const int&&>(), "");
+
+static_assert(!std::is_same<lean::type_identity_t<int>, void>(), "");
+static_assert(!std::is_same<lean::type_identity_t<void>, int>(), "");
+
+} // namespace type_identity_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_mutable_reference_suite
 {
 
@@ -97,8 +116,6 @@ static_assert(!lean::is_mutable_reference<const nontrivial(&&)[4]>::value, "no")
 
 namespace decay_forward_suite
 {
-
-//-----------------------------------------------------------------------------
 
 static_assert(std::is_same<lean::decay_forward_t<int>, int>::value, "value");
 static_assert(std::is_same<lean::decay_forward_t<int&>, int&>::value, "reference");
