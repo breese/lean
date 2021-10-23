@@ -11,6 +11,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <lean/detail/type_traits.hpp>
+
 namespace lean
 {
 
@@ -44,6 +46,27 @@ struct pack_front<List<T, Tail...>> { using type = T; };
 
 template <typename... Ts>
 using pack_front = typename impl::pack_front<Ts...>::type;
+
+//-----------------------------------------------------------------------------
+// pack_contains
+
+template <typename List, typename T>
+struct pack_contains
+    : public std::false_type
+{
+};
+
+template <template <typename...> class List, typename... Tail, typename T>
+struct pack_contains<List<T, Tail...>, T>
+    : public std::true_type
+{
+};
+
+template <template <typename...> class List, typename Head, typename... Tail, typename T>
+struct pack_contains<List<Head, Tail...>, T>
+    : public pack_contains<List<Tail...>, T>
+{
+};
 
 } // namespace lean
 

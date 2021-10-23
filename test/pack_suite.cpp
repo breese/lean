@@ -10,7 +10,6 @@
 
 #include "test_assert.hpp"
 #include <lean/pack.hpp>
-#include <lean/type_traits.hpp>
 
 using namespace lean;
 
@@ -37,6 +36,36 @@ static_assert(std::is_same<pack_front<pack<const bool&>>, const bool&>(), "");
 
 } // namespace front_suite
 
+//-----------------------------------------------------------------------------
+
+namespace contains_suite
+{
+
+static_assert(pack_contains<pack<bool>, bool>(), "");
+static_assert(pack_contains<pack<bool, int>, bool>(), "");
+static_assert(pack_contains<pack<int, bool>, bool>(), "");
+static_assert(pack_contains<pack<bool, bool>, bool>(), "");
+
+static_assert(!pack_contains<pack<bool>, float>(), "");
+static_assert(!pack_contains<pack<bool, int>, float>(), "");
+
+static_assert( pack_contains<pack<int>, int>(), "");
+static_assert(!pack_contains<pack<int>, int&>(), "");
+static_assert(!pack_contains<pack<int>, int&&>(), "");
+static_assert(!pack_contains<pack<int>, const int>(), "");
+static_assert(!pack_contains<pack<int>, const int&>(), "");
+static_assert(!pack_contains<pack<int>, const int&&>(), "");
+
+static_assert(!pack_contains<pack<int&, int&&, const int, const int&, const int&&>, int>(), "");
+static_assert( pack_contains<pack<int&, int&&, const int, const int&, const int&&>, int&>(), "");
+static_assert( pack_contains<pack<int&, int&&, const int, const int&, const int&&>, int&&>(), "");
+static_assert( pack_contains<pack<int&, int&&, const int, const int&, const int&&>, const int>(), "");
+static_assert( pack_contains<pack<int&, int&&, const int, const int&, const int&&>, const int&>(), "");
+static_assert( pack_contains<pack<int&, int&&, const int, const int&, const int&&>, const int&&>(), "");
+
+static_assert(!pack_contains<bool, bool>(), ""); // Must be pack<bool>
+
+} // namespace contains_suite
 
 //-----------------------------------------------------------------------------
 
