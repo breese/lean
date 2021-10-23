@@ -44,6 +44,23 @@ static_assert(!std::is_same<lean::type_identity_t<void>, int>(), "");
 
 //-----------------------------------------------------------------------------
 
+namespace type_sizeof_suite
+{
+
+static_assert(lean::type_sizeof<int>() == sizeof(int), "");
+static_assert(lean::type_sizeof<int&>() == sizeof(int&), "");
+static_assert(lean::type_sizeof<int&&>() == sizeof(int&&), "");
+static_assert(lean::type_sizeof<const int>() == sizeof(const int), "");
+static_assert(lean::type_sizeof<const int&>() == sizeof(const int&), "");
+static_assert(lean::type_sizeof<const int&&>() == sizeof(const int&&), "");
+
+static_assert(lean::type_sizeof<int[2]>() == sizeof(int[2]), "");
+static_assert(lean::type_sizeof<int[2]>() != sizeof(int[1]), "");
+
+} // namespace type_sizeof_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_mutable_reference_suite
 {
 

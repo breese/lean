@@ -124,6 +124,15 @@ using type_identity_t = typename type_identity<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// type_sizeof
+
+template <typename T>
+struct type_sizeof
+    : public std::integral_constant<std::size_t, sizeof(T)>
+{
+};
+
+//-----------------------------------------------------------------------------
 // void_t [N3911]
 //
 // std::void_t is defined as
