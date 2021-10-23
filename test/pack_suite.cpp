@@ -69,6 +69,37 @@ static_assert(!pack_contains<bool, bool>(), ""); // Must be pack<bool>
 
 //-----------------------------------------------------------------------------
 
+namespace fold_suite
+{
+
+template <std::size_t N>
+using constant = lean::integral_constant<std::size_t, N>;
+
+static_assert(std::is_same<pack_fold<pack<constant<1>>, type_less>, constant<1>>(), "");
+static_assert(std::is_same<pack_fold<pack<constant<1>, constant<2>>, type_less>, constant<1>>(), "");
+
+static_assert(std::is_same<pack_fold<pack<constant<1>, constant<2>, constant<3>>, type_less>, constant<1>>(), "");
+static_assert(std::is_same<pack_fold<pack<constant<2>, constant<3>, constant<1>>, type_less>, constant<1>>(), "");
+static_assert(std::is_same<pack_fold<pack<constant<3>, constant<1>, constant<2>>, type_less>, constant<1>>(), "");
+
+static_assert(std::is_same<pack_fold<pack<constant<1>, constant<2>, constant<3>>, type_greater>, constant<3>>(), "");
+static_assert(std::is_same<pack_fold<pack<constant<2>, constant<3>, constant<1>>, type_greater>, constant<3>>(), "");
+static_assert(std::is_same<pack_fold<pack<constant<3>, constant<1>, constant<2>>, type_greater>, constant<3>>(), "");
+
+template <typename Lhs, typename Rhs>
+struct type_less_sizeof : public type_less_with<type_sizeof, Lhs, Rhs> {};
+
+static_assert(std::is_same<pack_fold<pack<int[1]>, type_less_sizeof>, int[1]>(), "");
+static_assert(std::is_same<pack_fold<pack<int[1], int[2]>, type_less_sizeof>, int[1]>(), "");
+
+static_assert(std::is_same<pack_fold<pack<int[1], int[2], int[3]>, type_less_sizeof>, int[1]>(), "");
+static_assert(std::is_same<pack_fold<pack<int[2], int[3], int[1]>, type_less_sizeof>, int[1]>(), "");
+static_assert(std::is_same<pack_fold<pack<int[3], int[1], int[2]>, type_less_sizeof>, int[1]>(), "");
+
+} // namespace fold_suite
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     return 0;

@@ -68,6 +68,41 @@ struct pack_contains<List<Head, Tail...>, T>
 {
 };
 
+//-----------------------------------------------------------------------------
+// pack_fold
+
+namespace impl
+{
+
+template <typename, template <typename, typename> class>
+struct pack_fold;
+
+template <template <typename...> class List, template <typename, typename> class Predicate>
+struct pack_fold<List<>, Predicate>;
+
+template <template <typename...> class List, typename T, template <typename, typename> class Predicate>
+struct pack_fold<List<T>, Predicate>
+{
+    using type = T;
+};
+
+template <template <typename...> class List, typename T, typename U, template <typename, typename> class Predicate>
+struct pack_fold<List<T, U>, Predicate>
+{
+    using type = conditional_t<Predicate<T, U>::value, T, U>;
+};
+
+template <template <typename...> class List, typename T, typename U, typename... Tail, template <typename, typename> class Predicate>
+struct pack_fold<List<T, U, Tail...>, Predicate>
+{
+    using type = typename pack_fold<List<typename pack_fold<List<T, U>, Predicate>::type, Tail...>, Predicate>::type;
+};
+
+} // namespace impl
+
+template <typename List, template <typename, typename> class Predicate>
+using pack_fold = typename impl::pack_fold<List, Predicate>::type;
+
 } // namespace lean
 
 #endif // LEAN_PACK_HPP
