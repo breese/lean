@@ -141,8 +141,11 @@ struct type_front<T, Tail...> { using type = T; };
 
 } // namespace impl
 
+template <typename T, typename...>
+struct type_front { using type = T; };
+
 template <typename... Ts>
-using type_front = typename impl::type_front<Ts...>::type;
+using type_front_t = typename type_front<Ts...>::type;
 
 //-----------------------------------------------------------------------------
 // type_sizeof

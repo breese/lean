@@ -37,7 +37,7 @@ template <typename>
 struct pack_front;
 
 template <template <typename...> class List, typename... Ts>
-struct pack_front<List<Ts...>> { using type = lean::type_front<Ts...>; };
+struct pack_front<List<Ts...>> { using type = type_front_t<Ts...>; };
 
 } // namespace impl
 
