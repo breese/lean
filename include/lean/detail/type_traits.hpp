@@ -17,6 +17,22 @@ namespace lean
 {
 
 //-----------------------------------------------------------------------------
+// bool_constant [N4389]
+
+using std::integral_constant;
+
+#if __cpp_lib_bool_constant
+
+using std::bool_constant;
+
+#else
+
+template <bool B>
+using bool_constant = integral_constant<bool, B>;
+
+#endif
+
+//-----------------------------------------------------------------------------
 // Aliases [N3655]
 
 using std::add_const;
