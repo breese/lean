@@ -133,6 +133,30 @@ struct type_sizeof
 };
 
 //-----------------------------------------------------------------------------
+// type_less
+
+template <template <typename> class F, typename Lhs, typename Rhs>
+struct type_less_with
+    : public bool_constant<(F<Lhs>::value < F<Rhs>::value)>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using type_less = type_less_with<type_identity_t, Lhs, Rhs>;
+
+//-----------------------------------------------------------------------------
+// type_greater
+
+template <template <typename> class F, typename Lhs, typename Rhs>
+struct type_greater_with
+    : public bool_constant<(F<Lhs>::value > F<Rhs>::value)>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using type_greater = typename type_greater_with<type_identity_t, Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
 // void_t [N3911]
 //
 // std::void_t is defined as

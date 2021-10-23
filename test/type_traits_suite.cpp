@@ -61,6 +61,50 @@ static_assert(lean::type_sizeof<int[2]>() != sizeof(int[1]), "");
 
 //-----------------------------------------------------------------------------
 
+namespace type_less_suite
+{
+
+template <std::size_t N>
+using constant = lean::integral_constant<std::size_t, N>;
+
+static_assert(!lean::type_less<constant<0>, constant<0>>(), "");
+static_assert(!lean::type_less<constant<1>, constant<0>>(), "");
+static_assert( lean::type_less<constant<0>, constant<1>>(), "");
+static_assert(!lean::type_less<constant<1>, constant<1>>(), "");
+
+static_assert(!lean::type_less_with<lean::type_sizeof, int[1], int[1]>(), "");
+static_assert(!lean::type_less_with<lean::type_sizeof, int[2], int[1]>(), "");
+static_assert( lean::type_less_with<lean::type_sizeof, int[1], int[2]>(), "");
+static_assert(!lean::type_less_with<lean::type_sizeof, int[2], int[2]>(), "");
+
+static_assert(!lean::type_less_with<lean::type_sizeof, int, int>(), "");
+
+} // namespace type_less_suite
+
+//-----------------------------------------------------------------------------
+
+namespace type_greater_suite
+{
+
+template <std::size_t N>
+using constant = lean::integral_constant<std::size_t, N>;
+
+static_assert(!lean::type_greater<constant<0>, constant<0>>(), "");
+static_assert( lean::type_greater<constant<1>, constant<0>>(), "");
+static_assert(!lean::type_greater<constant<0>, constant<1>>(), "");
+static_assert(!lean::type_greater<constant<1>, constant<1>>(), "");
+
+static_assert(!lean::type_greater_with<lean::type_sizeof, int[1], int[1]>(), "");
+static_assert( lean::type_greater_with<lean::type_sizeof, int[2], int[1]>(), "");
+static_assert(!lean::type_greater_with<lean::type_sizeof, int[1], int[2]>(), "");
+static_assert(!lean::type_greater_with<lean::type_sizeof, int[2], int[2]>(), "");
+
+static_assert(!lean::type_greater_with<lean::type_sizeof, int, int>(), "");
+
+} // namespace type_greater_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_mutable_reference_suite
 {
 
