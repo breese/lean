@@ -77,11 +77,10 @@ struct inplace_storage {
 
     constexpr inplace_storage() noexcept = default;
 
-    template <typename Arg0,
-              typename... Args,
-              typename = enable_if_t<!std::is_same<inplace_storage, remove_cvref_t<Arg0>>::value>>
-    explicit constexpr inplace_storage(Arg0&& arg0, Args&&... args)
-        : member(std::forward<Arg0>(arg0), std::forward<Args>(args)...)
+    template <typename... Args,
+              typename = enable_if_t<!std::is_same<inplace_storage, remove_cvref_t<type_front_t<Args...>>>::value>>
+    explicit constexpr inplace_storage(Args&&... args)
+        : member(std::forward<Args>(args)...)
     {
     }
 
@@ -111,11 +110,10 @@ private:
         constexpr member(const member&) noexcept = delete;
         constexpr member(member&&) noexcept = delete;
 
-        template <typename Arg0,
-                  typename... Args,
-                  typename = enable_if_t<!std::is_same<member, remove_cvref_t<Arg0>>::value>>
-        explicit constexpr member(Arg0&& arg0, Args&&... args)
-            : value(std::forward<Arg0>(arg0), std::forward<Args>(args)...)
+        template <typename... Args,
+                  typename = enable_if_t<!std::is_same<member, remove_cvref_t<type_front_t<Args...>>>::value>>
+        explicit constexpr member(Args&&... args)
+            : value(std::forward<Args>(args)...)
         {
         }
 
@@ -134,11 +132,10 @@ struct inplace_union {
 
     constexpr inplace_union() noexcept = default;
 
-    template <typename Arg0,
-              typename... Args,
-              typename = enable_if_t<!std::is_same<inplace_union, remove_cvref_t<Arg0>>::value>>
-    explicit constexpr inplace_union(Arg0&& arg0, Args&&... args)
-        : member(std::forward<Arg0>(arg0), std::forward<Args>(args)...)
+    template <typename... Args,
+              typename = enable_if_t<!std::is_same<inplace_union, remove_cvref_t<type_front_t<Args...>>>::value>>
+    explicit constexpr inplace_union(Args&&... args)
+        : member(std::forward<Args>(args)...)
     {
     }
 
