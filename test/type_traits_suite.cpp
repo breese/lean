@@ -44,6 +44,21 @@ static_assert(!std::is_same<lean::type_identity_t<void>, int>(), "");
 
 //-----------------------------------------------------------------------------
 
+namespace type_front_suite
+{
+
+static_assert(std::is_same<lean::type_front<bool>, bool>(), "");
+static_assert(std::is_same<lean::type_front<bool, int>, bool>(), "");
+static_assert(std::is_same<lean::type_front<bool, int, float>, bool>(), "");
+
+static_assert(std::is_same<lean::type_front<bool&>, bool&>(), "");
+static_assert(std::is_same<lean::type_front<bool&&>, bool&&>(), "");
+static_assert(std::is_same<lean::type_front<const bool&>, const bool&>(), "");
+
+} // namespace type_front_suite
+
+//-----------------------------------------------------------------------------
+
 namespace type_sizeof_suite
 {
 

@@ -18,14 +18,6 @@ using namespace lean;
 namespace front_suite
 {
 
-static_assert(std::is_same<pack_front<bool>, bool>(), "");
-static_assert(std::is_same<pack_front<bool, int>, bool>(), "");
-static_assert(std::is_same<pack_front<bool, int, float>, bool>(), "");
-
-static_assert(std::is_same<pack_front<bool&>, bool&>(), "");
-static_assert(std::is_same<pack_front<bool&&>, bool&&>(), "");
-static_assert(std::is_same<pack_front<const bool&>, const bool&>(), "");
-
 static_assert(std::is_same<pack_front<pack<bool>>, bool>(), "");
 static_assert(std::is_same<pack_front<pack<bool, int>>, bool>(), "");
 static_assert(std::is_same<pack_front<pack<bool, int, float>>, bool>(), "");

@@ -124,6 +124,27 @@ using type_identity_t = typename type_identity<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// type_front
+//
+// Type alias for the first type in a parameter pack.
+//
+// type_front<bool, int, float> == bool
+
+namespace impl
+{
+
+template <typename...>
+struct type_front;
+
+template <typename T, typename... Tail>
+struct type_front<T, Tail...> { using type = T; };
+
+} // namespace impl
+
+template <typename... Ts>
+using type_front = typename impl::type_front<Ts...>::type;
+
+//-----------------------------------------------------------------------------
 // type_sizeof
 
 template <typename T>

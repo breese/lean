@@ -25,27 +25,24 @@ struct pack;
 //-----------------------------------------------------------------------------
 // pack_front
 //
-// Type alias for the first type in a parameter pack or a type list.
+// Type alias for the first type in a type list.
 //
-// pack_front<bool, int, float> == bool
+// pack_front<pack<bool, int, float>> == bool
 // pack_front<std::tuple<bool, int, float>> == bool
 
 namespace impl
 {
 
-template <typename...>
+template <typename>
 struct pack_front;
 
-template <typename T, typename... Tail>
-struct pack_front<T, Tail...> { using type = T; };
-
-template <template <typename...> class List, typename T, typename... Tail>
-struct pack_front<List<T, Tail...>> { using type = T; };
+template <template <typename...> class List, typename... Ts>
+struct pack_front<List<Ts...>> { using type = lean::type_front<Ts...>; };
 
 } // namespace impl
 
-template <typename... Ts>
-using pack_front = typename impl::pack_front<Ts...>::type;
+template <typename List>
+using pack_front = typename impl::pack_front<List>::type;
 
 //-----------------------------------------------------------------------------
 // pack_contains
