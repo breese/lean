@@ -59,6 +59,24 @@ static_assert(std::is_same<lean::type_front_t<const bool&>, const bool&>(), "");
 
 //-----------------------------------------------------------------------------
 
+namespace type_element_suite
+{
+
+static_assert(std::is_same<lean::type_element_t<0, bool>, bool>(), "");
+static_assert(std::is_same<lean::type_element_t<0, bool, int>, bool>(), "");
+static_assert(std::is_same<lean::type_element_t<1, bool, int>, int>(), "");
+static_assert(std::is_same<lean::type_element_t<0, bool, int, float>, bool>(), "");
+static_assert(std::is_same<lean::type_element_t<1, bool, int, float>, int>(), "");
+static_assert(std::is_same<lean::type_element_t<2, bool, int, float>, float>(), "");
+
+static_assert(std::is_same<lean::type_element_t<0, bool&>, bool&>(), "");
+static_assert(std::is_same<lean::type_element_t<0, bool&&>, bool&&>(), "");
+static_assert(std::is_same<lean::type_element_t<0, const bool&>, const bool&>(), "");
+
+} // namespace type_element_suite
+
+//-----------------------------------------------------------------------------
+
 namespace type_sizeof_suite
 {
 

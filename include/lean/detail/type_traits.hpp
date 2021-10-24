@@ -129,12 +129,79 @@ using type_identity_t = typename type_identity<T>::type;
 // Type alias for the first type in a parameter pack.
 //
 // type_front<bool, int, float> == bool
+//
+// Constraint: sizeof...(Ts) > 0
 
 template <typename T, typename...>
 struct type_front { using type = T; };
 
 template <typename... Ts>
 using type_front_t = typename type_front<Ts...>::type;
+
+//-----------------------------------------------------------------------------
+// type_element
+//
+// Type alias for the Nth type in a parameter pack.
+//
+// N is zero-indexed.
+//
+// type_element<0, bool, int, float> == bool
+// type_element<1, bool, int, float> == int
+// type_element<2, bool, int, float> == float
+//
+// Constraint: N <= sizeof...(Ts)
+
+#if defined(__has_builtin)
+# if __has_builtin(__type_pack_element)
+#  define LEAN_HAS_TYPE_PACK_ELEMENT 1
+# endif
+#endif
+
+#if defined(LEAN_HAS_TYPE_PACK_ELEMENT)
+
+template <std::size_t N, typename... Ts>
+struct type_element
+{
+    using type = __type_pack_element<N, Ts...>;
+};
+
+#else
+
+namespace impl
+{
+
+template <std::size_t N, typename, typename... Tail>
+struct type_element
+    : public type_element<N - 1, Tail...>
+{
+};
+
+template <typename T, typename... Tail>
+struct type_element<0, T, Tail...>
+{
+    using type = T;
+};
+
+template <typename U, typename T, typename... Tail>
+struct type_element<1, U, T, Tail...>
+{
+    using type = T;
+};
+
+} // namespace impl
+
+template <std::size_t N, typename... Ts>
+struct type_element
+    : public impl::type_element<N, Ts...>
+{
+};
+
+#endif
+
+template <std::size_t N, typename... Ts>
+using type_element_t = typename type_element<N, Ts...>::type;
+
+#undef LEAN_HAS_TYPE_PACK_ELEMENT
 
 //-----------------------------------------------------------------------------
 // type_sizeof
