@@ -23,6 +23,46 @@ namespace v1
 {
 
 //-----------------------------------------------------------------------------
+// constexpr addressof [P0304]
+
+#if __cpp_lib_addressof_constexpr >= 201603L
+
+using std::addressof;
+
+#else
+
+namespace impl
+{
+
+template <typename T, typename = void>
+struct is_addressof_overloaded : public std::false_type {};
+
+template <typename T>
+struct is_addressof_overloaded<T,
+                               void_t<decltype(std::declval<T&>().operator&())>>
+    : public std::true_type
+{
+};
+
+} // namespace impl
+
+template <typename T,
+          enable_if_t<!impl::is_addressof_overloaded<T>::value, int> = 0>
+constexpr T* addressof(T& value)
+{
+    return &value;
+}
+
+template <typename T,
+          enable_if_t<impl::is_addressof_overloaded<T>::value, int> = 0>
+T* addressof(T& value)
+{
+    return std::addressof(value);
+}
+
+#endif
+
+//-----------------------------------------------------------------------------
 // construct_at
 
 #if __cpp_lib_constexpr_dynamic_alloc >= 201811L

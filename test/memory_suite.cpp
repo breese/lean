@@ -30,6 +30,19 @@ struct virtual_dtor
 
 //-----------------------------------------------------------------------------
 
+namespace addressof_suite
+{
+
+using namespace lean::v1;
+
+int variable = 0;
+
+static_assert(addressof(variable) == &variable, "");
+
+} // namespace addressof_suite
+
+//-----------------------------------------------------------------------------
+
 namespace construct_suite
 {
 

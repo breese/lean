@@ -47,7 +47,7 @@ public:
               typename DecayT = decay_t<T>,
               typename = enable_if_t<!std::is_same<unique_any, DecayT>::value>>
     unique_any(T&& value)
-        : interface(&table<DecayT>::instance())
+        : interface(addressof(table<DecayT>::instance()))
     {
         overload<DecayT>::create(storage, std::forward<T>(value));
     }
@@ -60,7 +60,7 @@ public:
               typename DecayT = decay_t<T>,
               typename = enable_if_t<std::is_constructible<DecayT, Args...>::value>>
     explicit unique_any(lean::in_place_type_t<T>, Args&&... args)
-        : interface(&table<DecayT>::instance())
+        : interface(addressof(table<DecayT>::instance()))
     {
         overload<DecayT>::create(storage, std::forward<Args>(args)...);
     }
@@ -195,7 +195,7 @@ protected:
 
         static bool holds(const unique_any& self) noexcept
         {
-            return self.interface == &table<T>::instance();
+            return self.interface == addressof(table<T>::instance());
         }
     };
 
@@ -206,12 +206,12 @@ protected:
     {
         static T* cast(storage_type& self) noexcept
         {
-            return &reinterpret_cast<T&>(self.buffer);
+            return reinterpret_cast<T*>(addressof(self.buffer));
         }
 
         static const T* cast(const storage_type& self) noexcept
         {
-            return &reinterpret_cast<const T&>(self.buffer);
+            return reinterpret_cast<const T*>(addressof(self.buffer));
         }
 
         template <typename... Args>
@@ -227,7 +227,7 @@ protected:
 
         static bool holds(const unique_any& self) noexcept
         {
-            return self.interface == &table<T>::instance();
+            return self.interface == addressof(table<T>::instance());
         }
     };
 
@@ -257,7 +257,7 @@ protected:
     {
         static const struct interface& instance()
         {
-            static constexpr struct interface data = { &overload<T>::destroy };
+            static constexpr struct interface data = { addressof(overload<T>::destroy) };
             return data;
         }
     };
