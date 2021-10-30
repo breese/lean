@@ -25,6 +25,90 @@ struct nontrivial
 
 //-----------------------------------------------------------------------------
 
+namespace negation_suite
+{
+
+static_assert(lean::negation<std::false_type>() == true, "");
+static_assert(lean::negation<std::true_type>() == false, "");
+
+} // namespace negation_suite
+
+//-----------------------------------------------------------------------------
+
+namespace conjunction_suite
+{
+
+static_assert( lean::conjunction<>(), "");
+static_assert(!lean::conjunction<std::false_type>(), "");
+static_assert( lean::conjunction<std::true_type>(), "");
+
+static_assert(!lean::conjunction<std::false_type, std::false_type>(), "");
+static_assert(!lean::conjunction<std::false_type, std::true_type>(), "");
+static_assert(!lean::conjunction<std::true_type, std::false_type>::value, "");
+static_assert( lean::conjunction<std::true_type, std::true_type>(), "");
+
+static_assert(!lean::conjunction<std::false_type, std::false_type, std::false_type>(), "");
+static_assert(!lean::conjunction<std::false_type, std::false_type, std::true_type>(), "");
+static_assert(!lean::conjunction<std::false_type, std::true_type, std::false_type>(), "");
+static_assert(!lean::conjunction<std::false_type, std::true_type, std::true_type>(), "");
+static_assert(!lean::conjunction<std::true_type, std::false_type, std::false_type>(), "");
+static_assert(!lean::conjunction<std::true_type, std::false_type, std::true_type>(), "");
+static_assert(!lean::conjunction<std::true_type, std::true_type, std::false_type>(), "");
+static_assert( lean::conjunction<std::true_type, std::true_type, std::true_type>(), "");
+
+static_assert(lean::conjunction<std::integral_constant<int, 0>>() == 0, "");
+static_assert(lean::conjunction<std::integral_constant<int, 1>>() == 1, "");
+static_assert(lean::conjunction<std::integral_constant<int, 2>>() == 2, "");
+
+static_assert(lean::conjunction<std::integral_constant<int, 0>, std::integral_constant<int, 0>>() == 0, "");
+static_assert(lean::conjunction<std::integral_constant<int, 0>, std::integral_constant<int, 1>>() == 0, "");
+static_assert(lean::conjunction<std::integral_constant<int, 1>, std::integral_constant<int, 0>>() == 0, "");
+static_assert(lean::conjunction<std::integral_constant<int, 1>, std::integral_constant<int, 1>>() == 1, "");
+
+static_assert(lean::conjunction<std::integral_constant<int, 1>, std::integral_constant<int, 2>>() == 2, "");
+static_assert(lean::conjunction<std::integral_constant<int, 2>, std::integral_constant<int, 1>>() == 1, "");
+
+} // namespace conjunction_suite
+
+//-----------------------------------------------------------------------------
+
+namespace disjunction_suite
+{
+
+static_assert(!lean::disjunction<>(), "");
+static_assert(!lean::disjunction<std::false_type>(), "");
+static_assert( lean::disjunction<std::true_type>(), "");
+
+static_assert(!lean::disjunction<std::false_type, std::false_type>(), "");
+static_assert( lean::disjunction<std::false_type, std::true_type>(), "");
+static_assert( lean::disjunction<std::true_type, std::false_type>::value, "");
+static_assert( lean::disjunction<std::true_type, std::true_type>(), "");
+
+static_assert(!lean::disjunction<std::false_type, std::false_type, std::false_type>(), "");
+static_assert( lean::disjunction<std::false_type, std::false_type, std::true_type>(), "");
+static_assert( lean::disjunction<std::false_type, std::true_type, std::false_type>(), "");
+static_assert( lean::disjunction<std::false_type, std::true_type, std::true_type>(), "");
+static_assert( lean::disjunction<std::true_type, std::false_type, std::false_type>(), "");
+static_assert( lean::disjunction<std::true_type, std::false_type, std::true_type>(), "");
+static_assert( lean::disjunction<std::true_type, std::true_type, std::false_type>(), "");
+static_assert( lean::disjunction<std::true_type, std::true_type, std::true_type>(), "");
+
+static_assert(lean::disjunction<std::integral_constant<int, 0>>() == 0, "");
+static_assert(lean::disjunction<std::integral_constant<int, 1>>() == 1, "");
+static_assert(lean::disjunction<std::integral_constant<int, 2>>() == 2, "");
+
+static_assert(lean::disjunction<std::integral_constant<int, 0>, std::integral_constant<int, 0>>() == 0, "");
+static_assert(lean::disjunction<std::integral_constant<int, 0>, std::integral_constant<int, 1>>() == 1, "");
+static_assert(lean::disjunction<std::integral_constant<int, 1>, std::integral_constant<int, 0>>() == 1, "");
+static_assert(lean::disjunction<std::integral_constant<int, 1>, std::integral_constant<int, 1>>() == 1, "");
+
+static_assert(lean::disjunction<std::integral_constant<int, 1>, std::integral_constant<int, 2>>() == 1, "");
+static_assert(lean::disjunction<std::integral_constant<int, 2>, std::integral_constant<int, 1>>() == 2, "");
+
+} // namespace disjunction_suite
+
+//-----------------------------------------------------------------------------
+
 namespace type_identity_suite
 {
 

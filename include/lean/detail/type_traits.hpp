@@ -85,6 +85,55 @@ using remove_reference_t = typename remove_reference<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// logical operator types [P0013]
+//
+// Constraint: conjunction and disjuction cannot use final types
+
+#if __cpp_lib_logical_traits >= 201510L
+
+using std::conjunction;
+using std::disjunction;
+using std::negation;
+
+#else
+
+template <typename T>
+struct negation
+    : bool_constant<!static_cast<bool>(T::value)>
+{
+};
+
+template <typename...>
+struct conjunction : std::true_type {};
+
+template <typename T>
+struct conjunction<T> : T {};
+
+template <typename T, typename... Types>
+struct conjunction<T, Types...>
+    : conditional_t<negation<T>::value,
+                    T,
+                    conjunction<Types...>>
+{
+};
+
+template <typename...>
+struct disjunction : std::false_type {};
+
+template <typename T>
+struct disjunction<T> : T {};
+
+template <typename T, typename... Types>
+struct disjunction<T, Types...>
+    : conditional_t<negation<T>::value,
+                    disjunction<Types...>,
+                    T>
+{
+};
+
+#endif
+
+//-----------------------------------------------------------------------------
 // remove_cvref [P0550]
 
 #if __cpp_lib_remove_cvref >= 201711L
