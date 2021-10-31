@@ -14,7 +14,6 @@
 #include <functional> // std::mem_fn
 #include <lean/detail/config.hpp>
 #include <lean/detail/type_traits.hpp>
-#include <lean/pack.hpp>
 
 namespace lean
 {

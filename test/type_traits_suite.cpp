@@ -222,6 +222,68 @@ static_assert(!lean::type_greater_with<lean::type_sizeof, int, int>(), "");
 
 //-----------------------------------------------------------------------------
 
+namespace type_contains_suite
+{
+
+static_assert(!lean::type_contains<bool>(), "");
+static_assert( lean::type_contains<bool, bool>(), "");
+static_assert( lean::type_contains<bool, bool, int>(), "");
+static_assert( lean::type_contains<bool, int, bool>(), "");
+static_assert( lean::type_contains<bool, bool, bool>(), "");
+
+static_assert(!lean::type_contains<float, bool>(), "");
+static_assert(!lean::type_contains<float, bool, int>(), "");
+
+static_assert( lean::type_contains<int, int>(), "");
+static_assert(!lean::type_contains<int&, int>(), "");
+static_assert(!lean::type_contains<int&&, int>(), "");
+static_assert(!lean::type_contains<const int, int>(), "");
+static_assert(!lean::type_contains<const int&, int>(), "");
+static_assert(!lean::type_contains<const int&&, int>(), "");
+
+static_assert(!lean::type_contains<int, int&, int&&, const int, const int&, const int&&>(), "");
+static_assert( lean::type_contains<int&, int&, int&&, const int, const int&, const int&&>(), "");
+static_assert( lean::type_contains<int&&, int&, int&&, const int, const int&, const int&&>(), "");
+static_assert( lean::type_contains<const int, int&, int&&, const int, const int&, const int&&>(), "");
+static_assert( lean::type_contains<const int&, int&, int&&, const int, const int&, const int&&>(), "");
+static_assert( lean::type_contains<const int&&, int&, int&&, const int, const int&, const int&&>(), "");
+
+} // namespace type_contains_suite
+
+
+//-----------------------------------------------------------------------------
+
+namespace type_fold_left_suite
+{
+
+template <std::size_t N>
+using constant = lean::integral_constant<std::size_t, N>;
+
+static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>, constant<2>>, constant<1>>(), "");
+
+static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>, constant<2>, constant<3>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<2>, constant<3>, constant<1>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<3>, constant<1>, constant<2>>, constant<1>>(), "");
+
+static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<1>, constant<2>, constant<3>>, constant<3>>(), "");
+static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<2>, constant<3>, constant<1>>, constant<3>>(), "");
+static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<3>, constant<1>, constant<2>>, constant<3>>(), "");
+
+template <typename Lhs, typename Rhs>
+struct type_less_sizeof : public lean::type_less_with<lean::type_sizeof, Lhs, Rhs> {};
+
+static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1], int[2]>, int[1]>(), "");
+
+static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1], int[2], int[3]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[2], int[3], int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[3], int[1], int[2]>, int[1]>(), "");
+
+} // namespace type_fold_left_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_mutable_reference_suite
 {
 

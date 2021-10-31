@@ -17,6 +17,12 @@ namespace lean
 {
 
 //-----------------------------------------------------------------------------
+// Type-list
+
+template <typename...>
+struct pack;
+
+//-----------------------------------------------------------------------------
 // bool_constant [N4389]
 
 using std::integral_constant;
@@ -171,6 +177,67 @@ template <typename T>
 using type_identity_t = typename type_identity<T>::type;
 
 #endif
+
+//-----------------------------------------------------------------------------
+// type_contains
+//
+// Checks if the first type appears later in the parameter pack.
+
+template <typename, typename...>
+struct type_contains;
+
+template <typename T>
+struct type_contains<T>
+    : public std::false_type
+{
+};
+
+template <typename T, typename... Tail>
+struct type_contains<T, T, Tail...>
+    : public std::true_type
+{
+};
+
+template <typename T, typename Head, typename... Tail>
+struct type_contains<T, Head, Tail...>
+    : public type_contains<T, Tail...>
+{
+};
+
+//-----------------------------------------------------------------------------
+// type_fold_left
+
+namespace impl
+{
+
+template <template <typename, typename> class, typename...>
+struct type_fold_left;
+
+template <template <typename, typename> class Predicate>
+struct type_fold_left<Predicate>;
+
+template <template <typename, typename> class Predicate, typename T>
+struct type_fold_left<Predicate, T>
+{
+    using type = T;
+};
+
+template <template <typename, typename> class Predicate, typename Lhs, typename Rhs>
+struct type_fold_left<Predicate, Lhs, Rhs>
+{
+    using type = conditional_t<Predicate<Lhs, Rhs>::value, Lhs, Rhs>;
+};
+
+template <template <typename, typename> class Predicate, typename Lhs, typename Rhs, typename... Tail>
+struct type_fold_left<Predicate, Lhs, Rhs, Tail...>
+{
+    using type = typename type_fold_left<Predicate, typename type_fold_left<Predicate, Lhs, Rhs>::type, Tail...>::type;
+};
+
+} // namespace impl
+
+template <template <typename, typename> class Predicate, typename... Types>
+using type_fold_left = typename impl::type_fold_left<Predicate, Types...>::type;
 
 //-----------------------------------------------------------------------------
 // type_front

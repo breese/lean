@@ -15,7 +15,6 @@
 #include <memory>
 #include <lean/detail/config.hpp>
 #include <lean/detail/type_traits.hpp>
-#include <lean/pack.hpp>
 
 namespace lean
 {
@@ -168,7 +167,7 @@ struct inplace_union {
     template <typename Lhs, typename Rhs>
     struct greater_sizeof : public type_greater_with<type_sizeof, Lhs, Rhs> {};
 
-    using value_type = pack_fold<pack<Types...>, greater_sizeof>;
+    using value_type = type_fold_left<greater_sizeof, Types...>;
 
     constexpr inplace_union() noexcept = default;
 
@@ -185,7 +184,7 @@ struct inplace_union {
     LEAN_CONSTEXPR_CXX14
     auto data() noexcept
         -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
-                       pack_contains<pack<Types...>, R>::value,
+                       type_contains<R, Types...>::value,
                        add_pointer_t<R>>
     {
         return member.template data<R>();
@@ -194,7 +193,7 @@ struct inplace_union {
     template <typename R>
     constexpr auto data() const noexcept
         -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
-                       pack_contains<pack<Types...>, R>::value,
+                       type_contains<R, Types...>::value,
                        add_pointer_t<add_const_t<R>>>
     {
         return member.template data<R>();
