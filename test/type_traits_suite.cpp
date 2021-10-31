@@ -23,6 +23,9 @@ struct nontrivial
     ~nontrivial() {};
 };
 
+template <std::size_t N>
+using constant = lean::integral_constant<std::size_t, N>;
+
 //-----------------------------------------------------------------------------
 
 namespace negation_suite
@@ -178,47 +181,43 @@ static_assert(lean::type_sizeof<int[2]>() != sizeof(int[1]), "");
 
 //-----------------------------------------------------------------------------
 
-namespace type_less_suite
+namespace type_predicate_min_suite
 {
 
-template <std::size_t N>
-using constant = lean::integral_constant<std::size_t, N>;
+static_assert(std::is_same<lean::type_predicate_min_t<constant<0>, constant<0>>, constant<0>>(), "");
+static_assert(std::is_same<lean::type_predicate_min_t<constant<1>, constant<0>>, constant<0>>(), "");
+static_assert(std::is_same<lean::type_predicate_min_t<constant<0>, constant<1>>, constant<0>>(), "");
+static_assert(std::is_same<lean::type_predicate_min_t<constant<1>, constant<1>>, constant<1>>(), "");
 
-static_assert(!lean::type_less<constant<0>, constant<0>>(), "");
-static_assert(!lean::type_less<constant<1>, constant<0>>(), "");
-static_assert( lean::type_less<constant<0>, constant<1>>(), "");
-static_assert(!lean::type_less<constant<1>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, int[1], int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, int[2], int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, int[1], int[2]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, int[2], int[2]>, int[2]>(), "");
 
-static_assert(!lean::type_less_with<lean::type_sizeof, int[1], int[1]>(), "");
-static_assert(!lean::type_less_with<lean::type_sizeof, int[2], int[1]>(), "");
-static_assert( lean::type_less_with<lean::type_sizeof, int[1], int[2]>(), "");
-static_assert(!lean::type_less_with<lean::type_sizeof, int[2], int[2]>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, int, int>, int>(), "");
+static_assert(std::is_same<lean::type_predicate_min_with_t<lean::type_sizeof, char, int>, char>(), "");
 
-static_assert(!lean::type_less_with<lean::type_sizeof, int, int>(), "");
-
-} // namespace type_less_suite
+} // namespace type_predicate_min_suite
 
 //-----------------------------------------------------------------------------
 
-namespace type_greater_suite
+namespace type_predicate_max_suite
 {
 
-template <std::size_t N>
-using constant = lean::integral_constant<std::size_t, N>;
+static_assert(std::is_same<lean::type_predicate_max_t<constant<0>, constant<0>>, constant<0>>(), "");
+static_assert(std::is_same<lean::type_predicate_max_t<constant<1>, constant<0>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_predicate_max_t<constant<0>, constant<1>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_predicate_max_t<constant<1>, constant<1>>, constant<1>>(), "");
 
-static_assert(!lean::type_greater<constant<0>, constant<0>>(), "");
-static_assert( lean::type_greater<constant<1>, constant<0>>(), "");
-static_assert(!lean::type_greater<constant<0>, constant<1>>(), "");
-static_assert(!lean::type_greater<constant<1>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, int[1], int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, int[2], int[1]>, int[2]>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, int[1], int[2]>, int[2]>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, int[2], int[2]>, int[2]>(), "");
 
-static_assert(!lean::type_greater_with<lean::type_sizeof, int[1], int[1]>(), "");
-static_assert( lean::type_greater_with<lean::type_sizeof, int[2], int[1]>(), "");
-static_assert(!lean::type_greater_with<lean::type_sizeof, int[1], int[2]>(), "");
-static_assert(!lean::type_greater_with<lean::type_sizeof, int[2], int[2]>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, int, int>, int>(), "");
+static_assert(std::is_same<lean::type_predicate_max_with_t<lean::type_sizeof, char, int>, int>(), "");
 
-static_assert(!lean::type_greater_with<lean::type_sizeof, int, int>(), "");
-
-} // namespace type_greater_suite
+} // namespace type_predicate_max_suite
 
 //-----------------------------------------------------------------------------
 
@@ -233,6 +232,20 @@ static_assert( lean::type_contains<bool, bool, bool>(), "");
 
 static_assert(!lean::type_contains<float, bool>(), "");
 static_assert(!lean::type_contains<float, bool, int>(), "");
+
+static_assert( lean::type_contains<int, int>(), "");
+static_assert(!lean::type_contains<int, int&>(), "");
+static_assert(!lean::type_contains<int, int&&>(), "");
+static_assert(!lean::type_contains<int, const int>(), "");
+static_assert(!lean::type_contains<int, const int&>(), "");
+static_assert(!lean::type_contains<int, const int&&>(), "");
+
+static_assert(!lean::type_contains<bool, int>(), "");
+static_assert(!lean::type_contains<bool, int&>(), "");
+static_assert(!lean::type_contains<bool, int&&>(), "");
+static_assert(!lean::type_contains<bool, const int>(), "");
+static_assert(!lean::type_contains<bool, const int&>(), "");
+static_assert(!lean::type_contains<bool, const int&&>(), "");
 
 static_assert( lean::type_contains<int, int>(), "");
 static_assert(!lean::type_contains<int&, int>(), "");
@@ -256,31 +269,72 @@ static_assert( lean::type_contains<const int&&, int&, int&&, const int, const in
 namespace type_fold_left_suite
 {
 
-template <std::size_t N>
-using constant = lean::integral_constant<std::size_t, N>;
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_min, constant<1>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_min, constant<1>, constant<2>>, constant<1>>(), "");
 
-static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>>, constant<1>>(), "");
-static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>, constant<2>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_min, constant<1>, constant<2>, constant<3>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_min, constant<2>, constant<3>, constant<1>>, constant<1>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_min, constant<3>, constant<1>, constant<2>>, constant<1>>(), "");
 
-static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<1>, constant<2>, constant<3>>, constant<1>>(), "");
-static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<2>, constant<3>, constant<1>>, constant<1>>(), "");
-static_assert(std::is_same<lean::type_fold_left<lean::type_less, constant<3>, constant<1>, constant<2>>, constant<1>>(), "");
-
-static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<1>, constant<2>, constant<3>>, constant<3>>(), "");
-static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<2>, constant<3>, constant<1>>, constant<3>>(), "");
-static_assert(std::is_same<lean::type_fold_left<lean::type_greater, constant<3>, constant<1>, constant<2>>, constant<3>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_max, constant<1>, constant<2>, constant<3>>, constant<3>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_max, constant<2>, constant<3>, constant<1>>, constant<3>>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<lean::type_predicate_max, constant<3>, constant<1>, constant<2>>, constant<3>>(), "");
 
 template <typename Lhs, typename Rhs>
-struct type_less_sizeof : public lean::type_less_with<lean::type_sizeof, Lhs, Rhs> {};
+struct type_predicate_min_sizeof : public lean::type_predicate_min_with<lean::type_sizeof, Lhs, Rhs> {};
 
-static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1]>, int[1]>(), "");
-static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1], int[2]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<type_predicate_min_sizeof, int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<type_predicate_min_sizeof, int[1], int[2]>, int[1]>(), "");
 
-static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[1], int[2], int[3]>, int[1]>(), "");
-static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[2], int[3], int[1]>, int[1]>(), "");
-static_assert(std::is_same<lean::type_fold_left<type_less_sizeof, int[3], int[1], int[2]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<type_predicate_min_sizeof, int[1], int[2], int[3]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<type_predicate_min_sizeof, int[2], int[3], int[1]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_fold_left_t<type_predicate_min_sizeof, int[3], int[1], int[2]>, int[1]>(), "");
+
+// Indices
+
+static_assert(lean::type_fold_left<lean::type_predicate_min, constant<1>, constant<2>, constant<3>>() == 0, "");
+static_assert(lean::type_fold_left<lean::type_predicate_min, constant<2>, constant<3>, constant<1>>() == 2, "");
+static_assert(lean::type_fold_left<lean::type_predicate_min, constant<3>, constant<1>, constant<2>>() == 1, "");
 
 } // namespace type_fold_left_suite
+
+//-----------------------------------------------------------------------------
+
+namespace type_min_suite
+{
+
+static_assert(std::is_same<lean::type_min_with_t<lean::type_sizeof, int[1], int[2], int[3]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_min_with_t<lean::type_sizeof, int[3], int[1], int[2]>, int[1]>(), "");
+static_assert(std::is_same<lean::type_min_with_t<lean::type_sizeof, int[3], int[2], int[1]>, int[1]>(), "");
+
+static_assert(lean::type_find_min_with<lean::type_sizeof, int[1], int[2], int[3]>() == 0, "");
+static_assert(lean::type_find_min_with<lean::type_sizeof, int[2], int[3], int[1]>() == 2, "");
+static_assert(lean::type_find_min_with<lean::type_sizeof, int[3], int[1], int[2]>() == 1, "");
+
+static_assert(lean::type_find_min<constant<1>, constant<2>, constant<3>>() == 0, "");
+static_assert(lean::type_find_min<constant<2>, constant<3>, constant<1>>() == 2, "");
+static_assert(lean::type_find_min<constant<3>, constant<1>, constant<2>>() == 1, "");
+
+} // namespace type_min_suite
+
+//-----------------------------------------------------------------------------
+
+namespace type_max_suite
+{
+
+static_assert(std::is_same<lean::type_max_with_t<lean::type_sizeof, int[1], int[2], int[3]>, int[3]>(), "");
+static_assert(std::is_same<lean::type_max_with_t<lean::type_sizeof, int[3], int[1], int[2]>, int[3]>(), "");
+static_assert(std::is_same<lean::type_max_with_t<lean::type_sizeof, int[3], int[2], int[1]>, int[3]>(), "");
+
+static_assert(lean::type_find_max_with<lean::type_sizeof, int[1], int[2], int[3]>() == 2, "");
+static_assert(lean::type_find_max_with<lean::type_sizeof, int[2], int[3], int[1]>() == 1, "");
+static_assert(lean::type_find_max_with<lean::type_sizeof, int[3], int[1], int[2]>() == 0, "");
+
+static_assert(lean::type_find_max<constant<1>, constant<2>, constant<3>>() == 2, "");
+static_assert(lean::type_find_max<constant<2>, constant<3>, constant<1>>() == 1, "");
+static_assert(lean::type_find_max<constant<3>, constant<1>, constant<2>>() == 0, "");
+
+} // namespace type_max_suite
 
 //-----------------------------------------------------------------------------
 

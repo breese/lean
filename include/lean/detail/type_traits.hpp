@@ -179,6 +179,17 @@ using type_identity_t = typename type_identity<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// Helper to bind a projection to a predicate
+
+template <template <template <typename> class, typename, typename> class Predicate,
+          template <typename> class Projection>
+struct type_bind_projection
+{
+    template <typename Lhs, typename Rhs>
+    using with = Predicate<Projection, Lhs, Rhs>;
+};
+
+//-----------------------------------------------------------------------------
 // type_contains
 //
 // Checks if the first type appears later in the parameter pack.
@@ -206,38 +217,60 @@ struct type_contains<T, Head, Tail...>
 
 //-----------------------------------------------------------------------------
 // type_fold_left
+//
+// F(F(F(T0, T1), T2), T3)...
+//
+// type = Ti
+// value = i
 
 namespace impl
 {
 
-template <template <typename, typename> class, typename...>
+template <std::size_t N, std::size_t M, template <typename, typename> class, typename...>
 struct type_fold_left;
 
-template <template <typename, typename> class Predicate>
-struct type_fold_left<Predicate>;
+template <std::size_t N, std::size_t M, template <typename, typename> class F>
+struct type_fold_left<N, M, F>;
 
-template <template <typename, typename> class Predicate, typename T>
-struct type_fold_left<Predicate, T>
+template <std::size_t N, std::size_t M, template <typename, typename> class F, typename T>
+struct type_fold_left<N, M, F, T>
 {
     using type = T;
+    static constexpr std::size_t value = N;
+    constexpr operator std::size_t() const noexcept { return value; }
 };
 
-template <template <typename, typename> class Predicate, typename Lhs, typename Rhs>
-struct type_fold_left<Predicate, Lhs, Rhs>
+template <std::size_t N, std::size_t M, template <typename, typename> class F, typename Lhs, typename Rhs>
+struct type_fold_left<N, M, F, Lhs, Rhs>
 {
-    using type = conditional_t<Predicate<Lhs, Rhs>::value, Lhs, Rhs>;
+    using type = typename F<Lhs, Rhs>::type;
+    static constexpr std::size_t value = std::is_same<type, Lhs>::value ? N : M;
+    constexpr operator std::size_t() const noexcept { return value; }
 };
 
-template <template <typename, typename> class Predicate, typename Lhs, typename Rhs, typename... Tail>
-struct type_fold_left<Predicate, Lhs, Rhs, Tail...>
+template <std::size_t N, std::size_t M, template <typename, typename> class F, typename Lhs, typename Rhs, typename... Tail>
+struct type_fold_left<N, M, F, Lhs, Rhs, Tail...>
 {
-    using type = typename type_fold_left<Predicate, typename type_fold_left<Predicate, Lhs, Rhs>::type, Tail...>::type;
+private:
+    using head_type = type_fold_left<N, N + 1, F, Lhs, Rhs>;
+    using recursive_type = type_fold_left<head_type::value, N + 2, F, typename head_type::type, Tail...>;
+
+public:
+    using type = typename recursive_type::type;
+    static constexpr std::size_t value = recursive_type::value;
+    constexpr operator std::size_t() const noexcept { return value; }
 };
 
 } // namespace impl
 
-template <template <typename, typename> class Predicate, typename... Types>
-using type_fold_left = typename impl::type_fold_left<Predicate, Types...>::type;
+template <template <typename, typename> class F, typename... Types>
+struct type_fold_left
+    : impl::type_fold_left<0, 0, F, Types...>
+{
+};
+
+template <template <typename, typename> class F, typename... Types>
+using type_fold_left_t = typename type_fold_left<F, Types...>::type;
 
 //-----------------------------------------------------------------------------
 // type_front
@@ -329,28 +362,110 @@ struct type_sizeof
 };
 
 //-----------------------------------------------------------------------------
-// type_less
+// type_predicate_min
+//
+// Type alias for the type with the lowest Projection<T>::value
 
-template <template <typename> class F, typename Lhs, typename Rhs>
-struct type_less_with
-    : public bool_constant<(F<Lhs>::value < F<Rhs>::value)>
+template <template <typename> class Projection, typename Lhs, typename Rhs>
+struct type_predicate_min_with
+    : conditional<(Projection<Lhs>::value < Projection<Rhs>::value), Lhs, Rhs>
 {
 };
 
 template <typename Lhs, typename Rhs>
-using type_less = type_less_with<type_identity_t, Lhs, Rhs>;
+struct type_predicate_min
+    : type_predicate_min_with<type_identity_t, Lhs, Rhs>
+{
+};
+
+template <template <typename> class Projection, typename Lhs, typename Rhs>
+using type_predicate_min_with_t = typename type_predicate_min_with<Projection, Lhs, Rhs>::type;
+
+template <typename Lhs, typename Rhs>
+using type_predicate_min_t = typename type_predicate_min<Lhs, Rhs>::type;
 
 //-----------------------------------------------------------------------------
-// type_greater
+// type_predicate_max
+//
+// Type alias for the type with the highest Projection<T>::value
 
-template <template <typename> class F, typename Lhs, typename Rhs>
-struct type_greater_with
-    : public bool_constant<(F<Lhs>::value > F<Rhs>::value)>
+template <template <typename> class Projection, typename Lhs, typename Rhs>
+struct type_predicate_max_with
+    : conditional<(Projection<Lhs>::value > Projection<Rhs>::value), Lhs, Rhs>
 {
 };
 
 template <typename Lhs, typename Rhs>
-using type_greater = typename type_greater_with<type_identity_t, Lhs, Rhs>::type;
+struct type_predicate_max
+    : type_predicate_max_with<type_identity_t, Lhs, Rhs>
+{
+};
+
+template <template <typename> class Projection, typename Lhs, typename Rhs>
+using type_predicate_max_with_t = typename type_predicate_max_with<Projection, Lhs, Rhs>::type;
+
+template <typename Lhs, typename Rhs>
+using type_predicate_max_t = typename type_predicate_max<Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
+// type_min
+//
+// Type alias for the type with the lowest Projection<T>::value.
+
+template <template <typename> class Projection, typename... Types>
+struct type_min_with
+    : type_fold_left<type_bind_projection<type_predicate_min_with, Projection>::template with, Types...>
+{
+};
+
+template <template <typename> class Projection, typename... Types>
+using type_min_with_t = typename type_min_with<Projection, Types...>::type;
+
+template <typename... Types>
+using type_min_t = typename type_min_with<type_identity, Types...>::type;
+
+//-----------------------------------------------------------------------------
+// type_find_min
+
+template <template <typename> class Projection, typename... Types>
+struct type_find_min_with
+    : std::integral_constant<std::size_t,
+                             type_min_with<Projection, Types...>::value>
+{
+};
+
+template <typename... Types>
+using type_find_min = type_find_min_with<type_identity_t, Types...>;
+
+//-----------------------------------------------------------------------------
+// type_max
+//
+// Type alias for the type with the lowest Projection<T>::value.
+
+template <template <typename> class Projection, typename... Types>
+struct type_max_with
+    : type_fold_left<type_bind_projection<type_predicate_max_with, Projection>::template with, Types...>
+{
+};
+
+template <template <typename> class Projection, typename... Types>
+using type_max_with_t = typename type_max_with<Projection, Types...>::type;
+
+template <typename... Types>
+using type_max_t = typename type_max_with<type_identity, Types...>::type;
+
+//-----------------------------------------------------------------------------
+// type_find_max
+
+template <template <typename> class Projection, typename... Types>
+struct type_find_max_with
+    : std::integral_constant<std::size_t,
+                             type_max_with<Projection, Types...>::value>
+{
+};
+
+template <typename... Types>
+using type_find_max = type_find_max_with<type_identity_t, Types...>;
 
 //-----------------------------------------------------------------------------
 // void_t [N3911]

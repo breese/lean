@@ -164,10 +164,7 @@ private:
 
 template <typename... Types>
 struct inplace_union {
-    template <typename Lhs, typename Rhs>
-    struct greater_sizeof : public type_greater_with<type_sizeof, Lhs, Rhs> {};
-
-    using value_type = type_fold_left<greater_sizeof, Types...>;
+    using value_type = type_max_with_t<type_sizeof, Types...>;
 
     constexpr inplace_union() noexcept = default;
 
