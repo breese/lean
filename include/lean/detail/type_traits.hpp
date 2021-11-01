@@ -49,6 +49,7 @@ using std::decay;
 using std::enable_if;
 using std::is_same;
 using std::remove_const;
+using std::remove_pointer;
 using std::remove_reference;
 
 #if __cpp_lib_transformation_trait_aliases >= 201304L
@@ -60,6 +61,7 @@ using std::conditional_t;
 using std::decay_t;
 using std::enable_if_t;
 using std::remove_const_t;
+using std::remove_pointer_t;
 using std::remove_reference_t;
 
 #else
@@ -84,6 +86,9 @@ using enable_if_t = typename enable_if<B, T>::type;
 
 template <typename T>
 using remove_const_t = typename remove_const<T>::type;
+
+template <typename T>
+using remove_pointer_t = typename remove_pointer<T>::type;
 
 template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
