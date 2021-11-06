@@ -163,6 +163,53 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// remove_member_pointer
+//
+// If T has type "(possibly cv-qualified) pointer to data member T1" then the
+// member type alias names T1, otherwise T.
+//
+//   T                | remove_member_pointer_t<T>
+// -------------------+----------------------------
+//  bool *            | bool *
+//  bool cls::*       | bool
+//  bool cls::* const | bool
+//  const bool cls::* | const bool
+//  bool (*)()        | bool (*)()
+
+template <typename T>
+struct remove_member_pointer
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_pointer<T Class::*>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_pointer<T Class::* const>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_pointer<T Class::* volatile>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_pointer<T Class::* const volatile>
+{
+    using type = T;
+};
+
+template <typename T>
+using remove_member_pointer_t = typename remove_member_pointer<T>::type;
+
+//-----------------------------------------------------------------------------
 // type_identity [P0887]
 
 #if __cpp_lib_type_identity >= 201806L

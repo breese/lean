@@ -28,6 +28,58 @@ using constant = lean::integral_constant<std::size_t, N>;
 
 //-----------------------------------------------------------------------------
 
+namespace remove_member_pointer_suite
+{
+
+// Non-member (unchanged)
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool>, bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool *>, bool *>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool &>, bool &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool &&>, bool &&>{}, "");
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(*)()>, bool(*)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(* const)()>, bool(* const)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(* volatile)()>, bool(* volatile)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(* const volatile)()>, bool(* const volatile)()>{}, "");
+
+// Member pointer
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::*>, bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::* const>, bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::* const volatile>, bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::* volatile>, bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<const bool trivial::*>, const bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<const bool trivial::* const>, const bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<const bool trivial::* const volatile>, const bool>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<const bool trivial::* volatile>, const bool>{}, "");
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::**>, bool trivial::**>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::* trivial::*>, bool trivial::*>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool trivial::* const trivial::* volatile>, bool trivial::* const>{}, "");
+
+// Member function pointer
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)()>, bool()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const)()>, bool()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const volatile)()>, bool()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* volatile)()>, bool()>{}, "");
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::**)()>, bool(trivial::**)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* trivial::*)()>, bool(trivial::*)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const trivial::* volatile)()>, bool(trivial::* const)()>{}, "");
+
+// Reference to member function pointer (unchanged)
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* &)()>, bool(trivial::* &)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const &)()>, bool(trivial::* const &)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const volatile &)()>, bool(trivial::* const volatile &)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* volatile &)()>, bool(trivial::* volatile &)()>{}, "");
+
+} // namespace remove_member_pointer_suite
+
+//-----------------------------------------------------------------------------
+
 namespace negation_suite
 {
 
