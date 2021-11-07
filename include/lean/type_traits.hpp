@@ -12,6 +12,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <lean/detail/type_traits.hpp>
+#include <lean/detail/call_traits.hpp>
 
 namespace lean
 {

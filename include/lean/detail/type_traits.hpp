@@ -49,6 +49,7 @@ using std::decay;
 using std::enable_if;
 using std::is_same;
 using std::remove_const;
+using std::remove_cv;
 using std::remove_pointer;
 using std::remove_reference;
 
@@ -61,6 +62,7 @@ using std::conditional_t;
 using std::decay_t;
 using std::enable_if_t;
 using std::remove_const_t;
+using std::remove_cv_t;
 using std::remove_pointer_t;
 using std::remove_reference_t;
 
@@ -86,6 +88,9 @@ using enable_if_t = typename enable_if<B, T>::type;
 
 template <typename T>
 using remove_const_t = typename remove_const<T>::type;
+
+template <typename T>
+using remove_cv_t = typename remove_cv<T>::type;
 
 template <typename T>
 using remove_pointer_t = typename remove_pointer<T>::type;
@@ -176,35 +181,53 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 //  const bool cls::* | const bool
 //  bool (*)()        | bool (*)()
 
+namespace impl
+{
+
 template <typename T>
+struct remove_member_object_pointer
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_object_pointer<T Class::*>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_object_pointer<T Class::* const>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_object_pointer<T Class::* volatile>
+{
+    using type = T;
+};
+
+template <typename Class, typename T>
+struct remove_member_object_pointer<T Class::* const volatile>
+{
+    using type = T;
+};
+
+} // namespace impl
+
+template <typename T, typename = void>
 struct remove_member_pointer
 {
     using type = T;
 };
 
-template <typename Class, typename T>
-struct remove_member_pointer<T Class::*>
+template <typename T>
+struct remove_member_pointer<T, enable_if_t<std::is_member_object_pointer<T>::value>>
+    : impl::remove_member_object_pointer<T>
 {
-    using type = T;
 };
 
-template <typename Class, typename T>
-struct remove_member_pointer<T Class::* const>
-{
-    using type = T;
-};
-
-template <typename Class, typename T>
-struct remove_member_pointer<T Class::* volatile>
-{
-    using type = T;
-};
-
-template <typename Class, typename T>
-struct remove_member_pointer<T Class::* const volatile>
-{
-    using type = T;
-};
 
 template <typename T>
 using remove_member_pointer_t = typename remove_member_pointer<T>::type;

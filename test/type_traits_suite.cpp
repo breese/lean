@@ -38,6 +38,19 @@ static_assert(std::is_same<lean::remove_member_pointer_t<bool *>, bool *>{}, "")
 static_assert(std::is_same<lean::remove_member_pointer_t<bool &>, bool &>{}, "");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool &&>, bool &&>{}, "");
 
+static_assert(std::is_same<lean::remove_member_pointer_t<bool()>, bool()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const>, bool() const>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const &>, bool() const &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const &&>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() volatile>, bool() volatile>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() volatile &>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() volatile &&>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() &>, bool() &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool() &&>, bool() &&>{}, "");
+
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(*)()>, bool(*)()>{}, "");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(* const)()>, bool(* const)()>{}, "");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(* volatile)()>, bool(* volatile)()>{}, "");
@@ -65,7 +78,40 @@ static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const)(
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const volatile)()>, bool()>{}, "");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* volatile)()>, bool()>{}, "");
 
-static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::**)()>, bool(trivial::**)()>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const>, bool() const>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const &>, bool() const &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const &&>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile>, bool() volatile>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile &>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile &&>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() &>, bool() &>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() &&>, bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() noexcept>, bool() noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const)() noexcept>, bool() noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const volatile)() noexcept>, bool() noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* volatile)() noexcept>, bool() noexcept>{}, "");
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const noexcept>, bool() const noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const & noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const && noexcept>, bool() const && noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() const volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile noexcept>, bool() volatile noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile & noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() volatile && noexcept>, bool() volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() & noexcept>, bool() & noexcept>{}, "");
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::*)() && noexcept>, bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::**)()>, bool(trivial::**)()>{}, "pointer");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* trivial::*)()>, bool(trivial::*)()>{}, "");
 static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* const trivial::* volatile)()>, bool(trivial::* const)()>{}, "");
 
