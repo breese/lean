@@ -17,6 +17,224 @@ class cls;
 
 //-----------------------------------------------------------------------------
 
+namespace is_function_const_suite
+{
+
+static_assert(!lean::is_function_const_t<bool()>{}, "");
+static_assert( lean::is_function_const_t<bool() const>{}, "");
+static_assert( lean::is_function_const_t<bool() const &>{}, "");
+static_assert( lean::is_function_const_t<bool() const &&>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile &>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile &&>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile &>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile &&>{}, "");
+static_assert(!lean::is_function_const_t<bool() &>{}, "");
+static_assert(!lean::is_function_const_t<bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(!lean::is_function_const_t<bool() noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const & noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const && noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile & noexcept>{}, "");
+static_assert( lean::is_function_const_t<bool() const volatile && noexcept>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile noexcept>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile & noexcept>{}, "");
+static_assert(!lean::is_function_const_t<bool() volatile && noexcept>{}, "");
+static_assert(!lean::is_function_const_t<bool() & noexcept>{}, "");
+static_assert(!lean::is_function_const_t<bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(!lean::is_function_const_t<bool>{}, "");
+static_assert(!lean::is_function_const_t<const bool>{}, "");
+static_assert(!lean::is_function_const_t<bool *>{}, "");
+static_assert(!lean::is_function_const_t<bool * const>{}, "");
+static_assert(!lean::is_function_const_t<const bool *>{}, "");
+
+} // namespace is_function_const_suite
+
+//-----------------------------------------------------------------------------
+
+namespace is_function_volatile_suite
+{
+
+static_assert(!lean::is_function_volatile_t<bool()>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const &>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const &&>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile &>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile &&>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile &>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile &&>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() &>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(!lean::is_function_volatile_t<bool() noexcept>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const noexcept>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const & noexcept>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() const && noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile & noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() const volatile && noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile & noexcept>{}, "");
+static_assert( lean::is_function_volatile_t<bool() volatile && noexcept>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() & noexcept>{}, "");
+static_assert(!lean::is_function_volatile_t<bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(!lean::is_function_volatile_t<bool>{}, "");
+static_assert(!lean::is_function_volatile_t<volatile bool>{}, "");
+static_assert(!lean::is_function_volatile_t<bool *>{}, "");
+static_assert(!lean::is_function_volatile_t<bool * volatile>{}, "");
+static_assert(!lean::is_function_volatile_t<volatile bool *>{}, "");
+
+} // namespace is_function_volatile_suite
+
+//-----------------------------------------------------------------------------
+
+namespace is_function_lvalue_reference_suite
+{
+
+static_assert(!lean::is_function_lvalue_reference_t<bool()>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() const &>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const &&>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const volatile>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() const volatile &>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const volatile &&>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() volatile>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() volatile &>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() volatile &&>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() &>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(!lean::is_function_lvalue_reference_t<bool() noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const noexcept>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() const & noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const && noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const volatile noexcept>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() const volatile & noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() const volatile && noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() volatile noexcept>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() volatile & noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() volatile && noexcept>{}, "");
+static_assert( lean::is_function_lvalue_reference_t<bool() & noexcept>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(!lean::is_function_lvalue_reference_t<bool>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool&>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<bool&&>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<const bool>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<const bool&>{}, "");
+static_assert(!lean::is_function_lvalue_reference_t<const bool&&>{}, "");
+
+} // namespace is_function_lvalue_reference_suite
+
+//-----------------------------------------------------------------------------
+
+namespace is_function_rvalue_reference_suite
+{
+
+static_assert(!lean::is_function_rvalue_reference_t<bool()>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const &>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() const &&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const volatile>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const volatile &>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() const volatile &&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() volatile>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() volatile &>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() volatile &&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() &>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(!lean::is_function_rvalue_reference_t<bool() noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const & noexcept>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() const && noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const volatile noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() const volatile & noexcept>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() const volatile && noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() volatile noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() volatile & noexcept>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() volatile && noexcept>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool() & noexcept>{}, "");
+static_assert( lean::is_function_rvalue_reference_t<bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(!lean::is_function_rvalue_reference_t<bool>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<bool&&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<const bool>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<const bool&>{}, "");
+static_assert(!lean::is_function_rvalue_reference_t<const bool&&>{}, "");
+
+} // namespace is_function_rvalue_reference_suite
+
+//-----------------------------------------------------------------------------
+
+namespace is_function_reference_suite
+{
+
+static_assert(!lean::is_function_reference_t<bool()>{}, "");
+static_assert(!lean::is_function_reference_t<bool() const>{}, "");
+static_assert( lean::is_function_reference_t<bool() const &>{}, "");
+static_assert( lean::is_function_reference_t<bool() const &&>{}, "");
+static_assert(!lean::is_function_reference_t<bool() const volatile>{}, "");
+static_assert( lean::is_function_reference_t<bool() const volatile &>{}, "");
+static_assert( lean::is_function_reference_t<bool() const volatile &&>{}, "");
+static_assert(!lean::is_function_reference_t<bool() volatile>{}, "");
+static_assert( lean::is_function_reference_t<bool() volatile &>{}, "");
+static_assert( lean::is_function_reference_t<bool() volatile &&>{}, "");
+static_assert( lean::is_function_reference_t<bool() &>{}, "");
+static_assert( lean::is_function_reference_t<bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(!lean::is_function_reference_t<bool() noexcept>{}, "");
+static_assert(!lean::is_function_reference_t<bool() const noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() const & noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() const && noexcept>{}, "");
+static_assert(!lean::is_function_reference_t<bool() const volatile noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() const volatile & noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() const volatile && noexcept>{}, "");
+static_assert(!lean::is_function_reference_t<bool() volatile noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() volatile & noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() volatile && noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() & noexcept>{}, "");
+static_assert( lean::is_function_reference_t<bool() && noexcept>{}, "");
+
+#endif
+
+static_assert(!lean::is_function_reference_t<bool>{}, "");
+static_assert(!lean::is_function_reference_t<bool&>{}, "");
+static_assert(!lean::is_function_reference_t<bool&&>{}, "");
+static_assert(!lean::is_function_reference_t<const bool>{}, "");
+static_assert(!lean::is_function_reference_t<const bool&>{}, "");
+static_assert(!lean::is_function_reference_t<const bool&&>{}, "");
+
+} // namespace is_function_reference_suite
+
+//-----------------------------------------------------------------------------
+
 namespace remove_function_const_suite
 {
 

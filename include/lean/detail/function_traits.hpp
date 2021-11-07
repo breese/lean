@@ -11,6 +11,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <lean/detail/type_traits.hpp>
+
 namespace lean
 {
 namespace v1
@@ -24,6 +26,11 @@ struct function_traits;
 template <typename R, typename... Args>
 struct function_traits<R(Args...)>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...);
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...);
@@ -32,6 +39,11 @@ struct function_traits<R(Args...)>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...);
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const;
@@ -40,6 +52,11 @@ struct function_traits<R(Args...) const>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const &>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const;
@@ -48,6 +65,11 @@ struct function_traits<R(Args...) const &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const &&>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const;
@@ -56,6 +78,11 @@ struct function_traits<R(Args...) const &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const volatile;
@@ -64,6 +91,11 @@ struct function_traits<R(Args...) const volatile>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const volatile;
@@ -72,6 +104,11 @@ struct function_traits<R(Args...) const volatile &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &&>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const volatile;
@@ -80,6 +117,11 @@ struct function_traits<R(Args...) const volatile &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...) volatile;
@@ -88,6 +130,11 @@ struct function_traits<R(Args...) volatile>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...) volatile;
@@ -96,6 +143,11 @@ struct function_traits<R(Args...) volatile &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &&>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...) volatile;
@@ -104,6 +156,11 @@ struct function_traits<R(Args...) volatile &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) &>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...);
@@ -112,6 +169,11 @@ struct function_traits<R(Args...) &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) &&>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...);
@@ -122,6 +184,11 @@ struct function_traits<R(Args...) &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) noexcept;
@@ -130,6 +197,11 @@ struct function_traits<R(Args...) noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const noexcept;
@@ -138,6 +210,11 @@ struct function_traits<R(Args...) const noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const & noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const noexcept;
@@ -146,6 +223,11 @@ struct function_traits<R(Args...) const & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const && noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const noexcept;
@@ -154,6 +236,11 @@ struct function_traits<R(Args...) const && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
@@ -162,6 +249,11 @@ struct function_traits<R(Args...) const volatile noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile & noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
@@ -170,6 +262,11 @@ struct function_traits<R(Args...) const volatile & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile && noexcept>
 {
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
@@ -178,6 +275,11 @@ struct function_traits<R(Args...) const volatile && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) volatile noexcept;
@@ -186,6 +288,11 @@ struct function_traits<R(Args...) volatile noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile & noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) volatile noexcept;
@@ -194,6 +301,11 @@ struct function_traits<R(Args...) volatile & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile && noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) volatile noexcept;
@@ -202,6 +314,11 @@ struct function_traits<R(Args...) volatile && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) & noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) noexcept;
@@ -210,6 +327,11 @@ struct function_traits<R(Args...) & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) && noexcept>
 {
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) noexcept;

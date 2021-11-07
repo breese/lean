@@ -11,11 +11,95 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <lean/detail/type_traits.hpp>
 #include <lean/detail/function_traits.hpp>
 
 namespace lean
 {
+
+//-----------------------------------------------------------------------------
+// is_function_const
+
+template <typename T, typename = void>
+struct is_function_const
+    : std::false_type
+{
+};
+
+template <typename T>
+struct is_function_const<T, enable_if_t<std::is_function<T>::value>>
+    : v1::detail::function_traits<T>::is_const
+{
+};
+
+template <typename T>
+using is_function_const_t = typename is_function_const<T>::type;
+
+//-----------------------------------------------------------------------------
+// is_function_volatile
+
+template <typename T, typename = void>
+struct is_function_volatile
+    : std::false_type
+{
+};
+
+template <typename T>
+struct is_function_volatile<T, enable_if_t<std::is_function<T>::value>>
+    : v1::detail::function_traits<T>::is_volatile
+{
+};
+
+template <typename T>
+using is_function_volatile_t = typename is_function_volatile<T>::type;
+
+//-----------------------------------------------------------------------------
+// is_function_lvalue_reference
+
+template <typename T, typename = void>
+struct is_function_lvalue_reference
+    : std::false_type
+{
+};
+
+template <typename T>
+struct is_function_lvalue_reference<T, enable_if_t<std::is_function<T>::value>>
+    : v1::detail::function_traits<T>::is_lvalue_reference
+{
+};
+
+template <typename T>
+using is_function_lvalue_reference_t = typename is_function_lvalue_reference<T>::type;
+
+//-----------------------------------------------------------------------------
+// is_function_rvalue_reference
+
+template <typename T, typename = void>
+struct is_function_rvalue_reference
+    : std::false_type
+{
+};
+
+template <typename T>
+struct is_function_rvalue_reference<T, enable_if_t<std::is_function<T>::value>>
+    : v1::detail::function_traits<T>::is_rvalue_reference
+{
+};
+
+template <typename T>
+using is_function_rvalue_reference_t = typename is_function_rvalue_reference<T>::type;
+
+//-----------------------------------------------------------------------------
+// is_function_reference
+
+template <typename T>
+struct is_function_reference
+    : bool_constant<is_function_lvalue_reference<T>::value ||
+                    is_function_rvalue_reference<T>::value>
+{
+};
+
+template <typename T>
+using is_function_reference_t = typename is_function_reference<T>::type;
 
 //-----------------------------------------------------------------------------
 // remove_function_const
