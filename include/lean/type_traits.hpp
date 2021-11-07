@@ -12,10 +12,30 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <lean/detail/type_traits.hpp>
-#include <lean/detail/call_traits.hpp>
+#include <lean/detail/member_function_traits.hpp>
 
 namespace lean
 {
+
+//-----------------------------------------------------------------------------
+// remove_member_pointer customization
+//
+// Removes pointer from member function type.
+//
+//   T                               | remove_member_pointer_t<T>
+// ----------------------------------+----------------------------
+//  bool (*)()                       | bool(*)()
+//  bool (cls::*)()                  | bool()
+//  bool (cls::*)() const            | bool() const
+//  bool (cls::*)() const &          | bool() const &
+//  bool (cls::*)() const noexcept   | bool() const noexcept
+//  bool (cls::*)() const & noexcept | bool() const & noexcept
+
+template <typename T>
+struct remove_member_pointer<T, enable_if_t<std::is_member_function_pointer<T>::value>>
+{
+    using type = typename v1::detail::member_function_traits<remove_cv_t<T>>::remove_pointer;
+};
 
 //-----------------------------------------------------------------------------
 // is_mutable_reference
