@@ -436,6 +436,21 @@ static_assert(lean::type_find_max<constant<3>, constant<1>, constant<2>>() == 0,
 
 //-----------------------------------------------------------------------------
 
+namespace is_complete_suite
+{
+
+static_assert(lean::is_complete<int>::value, "");
+static_assert(lean::is_complete<trivial>::value, "");
+static_assert(lean::is_complete<nontrivial>::value, "");
+
+struct undef;
+
+static_assert(!lean::is_complete<undef>::value, "");
+
+} // namespace is_complete_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_mutable_reference_suite
 {
 

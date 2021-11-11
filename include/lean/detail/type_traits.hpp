@@ -562,6 +562,15 @@ struct make_void { using type = void; };
 template <typename... Ts>
 using void_t = typename detail::make_void<Ts...>::type;
 
+//-----------------------------------------------------------------------------
+// is_complete
+
+template <typename T, typename = void>
+struct is_complete : std::false_type {};
+
+template <typename T>
+struct is_complete<T, void_t<decltype(sizeof(T))>> : std::true_type {};
+
 } // namespace lean
 
 #endif // LEAN_DETAIL_TYPE_TRAITS_HPP
