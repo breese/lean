@@ -315,7 +315,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) & noexcept>
 {
     using is_const = std::false_type;
-    using is_volatile = std::_type;
+    using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
 
