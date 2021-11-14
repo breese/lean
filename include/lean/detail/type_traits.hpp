@@ -233,6 +233,35 @@ template <typename T>
 using remove_member_pointer_t = typename remove_member_pointer<T>::type;
 
 //-----------------------------------------------------------------------------
+// void_t [N3911]
+//
+// std::void_t is defined as
+//
+//   template <typename...> using void_t = void
+//
+// This does not always work well with SFINAE (see CWG 1558)
+
+namespace detail
+{
+
+template <typename...>
+struct make_void { using type = void; };
+
+} // namespace detail
+
+template <typename... Ts>
+using void_t = typename detail::make_void<Ts...>::type;
+
+//-----------------------------------------------------------------------------
+// is_complete
+
+template <typename T, typename = void>
+struct is_complete : std::false_type {};
+
+template <typename T>
+struct is_complete<T, void_t<decltype(sizeof(T))>> : std::true_type {};
+
+//-----------------------------------------------------------------------------
 // type_identity [P0887]
 
 #if __cpp_lib_type_identity >= 201806L
@@ -543,33 +572,23 @@ template <typename... Types>
 using type_find_max = type_find_max_with<type_identity_t, Types...>;
 
 //-----------------------------------------------------------------------------
-// void_t [N3911]
+// pack_rebind
 //
-// std::void_t is defined as
-//
-//   template <typename...> using void_t = void
-//
-// This does not always work well with SFINAE (see CWG 1558)
+// Type alias for Lhs<RhsTypes...> given Lhs<LhsTypes...> and Rhs<RhsTypes...>.
 
-namespace detail
+template <typename, typename>
+struct pack_rebind;
+
+template <template <typename...> class Lhs, typename... LhsTypes,
+          template <typename...> class Rhs, typename... RhsTypes>
+struct pack_rebind<Lhs<LhsTypes...>,
+                   Rhs<RhsTypes...>>
 {
+    using type = Lhs<RhsTypes...>;
+};
 
-template <typename...>
-struct make_void { using type = void; };
-
-} // namespace detail
-
-template <typename... Ts>
-using void_t = typename detail::make_void<Ts...>::type;
-
-//-----------------------------------------------------------------------------
-// is_complete
-
-template <typename T, typename = void>
-struct is_complete : std::false_type {};
-
-template <typename T>
-struct is_complete<T, void_t<decltype(sizeof(T))>> : std::true_type {};
+template <typename Lhs, typename Rhs>
+using pack_rebind_t = typename pack_rebind<Lhs, Rhs>::type;
 
 } // namespace lean
 

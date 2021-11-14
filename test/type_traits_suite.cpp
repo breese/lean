@@ -436,6 +436,24 @@ static_assert(lean::type_find_max<constant<3>, constant<1>, constant<2>>() == 0,
 
 //-----------------------------------------------------------------------------
 
+namespace pack_rebind_suite
+{
+
+template <typename...> struct test_pack;
+
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<>>, test_pack<>>{}, "");
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool>>, test_pack<bool>>{}, "");
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool, int>>, test_pack<bool, int>>{}, "");
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool, int, float>>, test_pack<bool, int, float>>{}, "");
+
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool>, lean::pack<>>, test_pack<>>{}, "");
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool, int>, lean::pack<>>, test_pack<>>{}, "");
+static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool, int, float>, lean::pack<>>, test_pack<>>{}, "");
+
+} // namespace pack_rebind_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_complete_suite
 {
 
