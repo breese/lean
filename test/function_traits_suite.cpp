@@ -17,6 +17,50 @@ class cls;
 
 //-----------------------------------------------------------------------------
 
+namespace function_return_suite
+{
+
+static_assert(std::is_same<lean::function_return_t<bool()>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool &()>, bool &>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool && ()>, bool &&>{}, "");
+static_assert(std::is_same<lean::function_return_t<const bool &()>, const bool &>{}, "");
+static_assert(std::is_same<lean::function_return_t<const bool && ()>, const bool &&>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool *()>, bool *>{}, "");
+static_assert(std::is_same<lean::function_return_t<const bool *()>, const bool *>{}, "");
+
+static_assert(std::is_same<lean::function_return_t<int(bool, float)>, int>{}, "");
+static_assert(std::is_same<lean::function_return_t<float(bool, int)>, float>{}, "");
+
+static_assert(std::is_same<lean::function_return_t<bool() const>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() const &>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() const &&>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() const volatile>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() const volatile &>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() const volatile &&>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() volatile>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() volatile &>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() volatile &&>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() &>, bool>{}, "");
+static_assert(std::is_same<lean::function_return_t<bool() &&>, bool>{}, "");
+
+} // namespace function_return_suite
+
+//-----------------------------------------------------------------------------
+
+namespace function_arguments_suite
+{
+
+template <typename...> struct argument_tuple;
+
+static_assert(std::is_same<lean::function_arguments_t<argument_tuple, bool()>, argument_tuple<>>{}, "");
+static_assert(std::is_same<lean::function_arguments_t<argument_tuple, bool(bool)>, argument_tuple<bool>>{}, "");
+static_assert(std::is_same<lean::function_arguments_t<argument_tuple, bool(bool, int)>, argument_tuple<bool, int>>{}, "");
+static_assert(std::is_same<lean::function_arguments_t<argument_tuple, bool(bool, int, float)>, argument_tuple<bool, int, float>>{}, "");
+
+} // namespace function_arguments_suite
+
+//-----------------------------------------------------------------------------
+
 namespace is_function_const_suite
 {
 

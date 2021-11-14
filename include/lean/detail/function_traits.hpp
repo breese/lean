@@ -26,6 +26,9 @@ struct function_traits;
 template <typename R, typename... Args>
 struct function_traits<R(Args...)>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -39,6 +42,9 @@ struct function_traits<R(Args...)>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -52,6 +58,9 @@ struct function_traits<R(Args...) const>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const &>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
@@ -65,6 +74,9 @@ struct function_traits<R(Args...) const &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const &&>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -78,6 +90,9 @@ struct function_traits<R(Args...) const &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -91,6 +106,9 @@ struct function_traits<R(Args...) const volatile>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
@@ -104,6 +122,9 @@ struct function_traits<R(Args...) const volatile &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &&>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -117,6 +138,9 @@ struct function_traits<R(Args...) const volatile &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -130,6 +154,9 @@ struct function_traits<R(Args...) volatile>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
@@ -143,6 +170,9 @@ struct function_traits<R(Args...) volatile &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &&>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -156,6 +186,9 @@ struct function_traits<R(Args...) volatile &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) &>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
@@ -169,6 +202,9 @@ struct function_traits<R(Args...) &>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) &&>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -184,6 +220,9 @@ struct function_traits<R(Args...) &&>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -197,6 +236,9 @@ struct function_traits<R(Args...) noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -210,6 +252,9 @@ struct function_traits<R(Args...) const noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const & noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
@@ -223,6 +268,9 @@ struct function_traits<R(Args...) const & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const && noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
@@ -236,6 +284,9 @@ struct function_traits<R(Args...) const && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -249,6 +300,9 @@ struct function_traits<R(Args...) const volatile noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile & noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
@@ -262,6 +316,9 @@ struct function_traits<R(Args...) const volatile & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile && noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::true_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -275,6 +332,9 @@ struct function_traits<R(Args...) const volatile && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -288,6 +348,9 @@ struct function_traits<R(Args...) volatile noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile & noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
@@ -301,6 +364,9 @@ struct function_traits<R(Args...) volatile & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile && noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
@@ -314,6 +380,9 @@ struct function_traits<R(Args...) volatile && noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) & noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
@@ -327,6 +396,9 @@ struct function_traits<R(Args...) & noexcept>
 template <typename R, typename... Args>
 struct function_traits<R(Args...) && noexcept>
 {
+    using return_type = R;
+    using arguments = pack<Args...>;
+
     using is_const = std::false_type;
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;

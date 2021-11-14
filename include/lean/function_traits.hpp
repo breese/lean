@@ -17,6 +17,35 @@ namespace lean
 {
 
 //-----------------------------------------------------------------------------
+// function_return
+
+template <typename T, typename = void>
+struct function_return;
+
+template <typename T>
+struct function_return<T, enable_if_t<std::is_function<T>::value>> {
+    using type = typename v1::detail::function_traits<T>::return_type;
+};
+
+template <typename T>
+using function_return_t = typename function_return<T>::type;
+
+//-----------------------------------------------------------------------------
+// function_arguments
+
+template <template <typename...> class, typename, typename = void>
+struct function_arguments;
+
+template <template <typename...> class Pack, typename T>
+struct function_arguments<Pack, T, enable_if_t<std::is_function<T>::value>>
+{
+    using type = pack_rebind_t<Pack<>, typename v1::detail::function_traits<T>::arguments>;
+};
+
+template <template <typename...> class Pack, typename T>
+using function_arguments_t = typename function_arguments<Pack, T>::type;
+
+//-----------------------------------------------------------------------------
 // is_function_const
 
 template <typename T, typename = void>
