@@ -126,6 +126,156 @@ static_assert(std::is_same<lean::remove_member_pointer_t<bool(trivial::* volatil
 
 //-----------------------------------------------------------------------------
 
+namespace copy_const_suite
+{
+
+static_assert(std::is_same<lean::copy_const_t<bool, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool, int>, const int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool *, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool * const, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool * volatile, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool * const volatile, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool *, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool * const, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool * volatile, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool * const volatile, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool *, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool * const, int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool * volatile, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool * const volatile, int>, const int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool(*)(), int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(* const)(), int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(* volatile)(), int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(* const volatile)(), int>, const int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool&, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool&, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool&, int>, int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool&&, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool&&, int>, int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const volatile bool&&, int>, int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool, const int>, const int>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, const int>, const int>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool(*)(), int(*)()>, int(*)()>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(*)(), int(* const)()>, int(* const)()>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(* const)(), int(*)()>, int(* const)()>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool(* const)(), int(* const)()>, int(* const)()>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool, int&>, int&>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool, const int&>, const int&>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, int&>, int&>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, const int&>, const int&>(), "");
+
+static_assert(std::is_same<lean::copy_const_t<bool, int*>, int*>(), "");
+static_assert(std::is_same<lean::copy_const_t<bool, const int*>, const int*>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, int*>, int* const>(), "");
+static_assert(std::is_same<lean::copy_const_t<const bool, const int*>, const int* const>(), "");
+
+} // namespace copy_const_suite
+
+//-----------------------------------------------------------------------------
+
+namespace copy_volatile_suite
+{
+
+static_assert(std::is_same<lean::copy_volatile_t<bool, int>, int>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<bool, volatile int>, volatile int>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<volatile bool, int>, volatile int>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<volatile bool, volatile int>, volatile int>(), "");
+
+static_assert(std::is_same<lean::copy_volatile_t<bool(*)(), int(*)()>, int(*)()>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<bool(*)(), int(* volatile)()>, int(* volatile)()>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<bool(* volatile)(), int(*)()>, int(* volatile)()>(), "");
+static_assert(std::is_same<lean::copy_volatile_t<bool(* volatile)(), int(* volatile)()>, int(* volatile)()>(), "");
+
+} // namespace copy_volatile_suite
+
+//-----------------------------------------------------------------------------
+
+namespace copy_cv_suite
+{
+
+static_assert(std::is_same<lean::copy_cv_t<bool, int>, int>(), "");
+static_assert(std::is_same<lean::copy_cv_t<bool, const volatile int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cv_t<const volatile bool, int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cv_t<const volatile bool, const volatile int>, const volatile int>(), "");
+
+static_assert(std::is_same<lean::copy_cv_t<bool(*)(), int(*)()>, int(*)()>(), "");
+static_assert(std::is_same<lean::copy_cv_t<bool(*)(), int(* const volatile)()>, int(* const volatile)()>(), "");
+static_assert(std::is_same<lean::copy_cv_t<bool(* const volatile)(), int(*)()>, int(* const volatile)()>(), "");
+static_assert(std::is_same<lean::copy_cv_t<bool(* const volatile)(), int(* const volatile)()>, int(* const volatile)()>(), "");
+
+} // namespace copy_cv_suite
+
+//-----------------------------------------------------------------------------
+
+namespace copy_reference_suite
+{
+
+static_assert(std::is_same<lean::copy_reference_t<bool, int>, int>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool, int&>, int&>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool&, int>, int&>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool&, int&>, int&>(), "");
+
+static_assert(std::is_same<lean::copy_reference_t<bool(*)(), int(*)()>, int(*)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(*)(), int(* &)()>, int(* &)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(* &)(), int(*)()>, int(* &)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(* &)(), int(* &)()>, int(* &)()>(), "");
+
+static_assert(std::is_same<lean::copy_reference_t<bool, int>, int>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool, int&&>, int&&>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool&&, int>, int&&>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool&&, int&&>, int&&>(), "");
+
+static_assert(std::is_same<lean::copy_reference_t<bool(*)(), int(*)()>, int(*)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(*)(), int(* &&)()>, int(* &&)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(* &&)(), int(*)()>, int(* &&)()>(), "");
+static_assert(std::is_same<lean::copy_reference_t<bool(* &&)(), int(* &&)()>, int(* &&)()>(), "");
+
+} // namespace copy_reference_suite
+
+//-----------------------------------------------------------------------------
+
+namespace copy_cvref_suite
+{
+
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int*>, int* const volatile>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool*, int>, int>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool*, int*>, int*>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool* const volatile, int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool* const volatile, int*>, int* const volatile>(), "");
+
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int&>, const volatile int&>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool&, int>, const volatile int&>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool&, int&>, const volatile int&>(), "");
+
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile)(), int(*)()>, int(* const volatile)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile)(), int(* &)()>, int(* const volatile &)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile &)(), int(*)()>, int(* const volatile &)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile &)(), int(* &)()>, int(* const volatile &)()>(), "");
+
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int>, const volatile int>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool, int&&>, const volatile int&&>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool&&, int>, const volatile int&&>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<const volatile bool&&, int&&>, const volatile int&&>(), "");
+
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile)(), int(*)()>, int(* const volatile)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile)(), int(* &&)()>, int(* const volatile &&)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile &&)(), int(*)()>, int(* const volatile &&)()>(), "");
+static_assert(std::is_same<lean::copy_cvref_t<bool(* const volatile &&)(), int(* &&)()>, int(* const volatile &&)()>(), "");
+
+} // namespace copy_cvref_suite
+
+//-----------------------------------------------------------------------------
+
 namespace negation_suite
 {
 

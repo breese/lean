@@ -43,7 +43,9 @@ using bool_constant = integral_constant<bool, B>;
 
 using std::add_const;
 using std::add_pointer;
+using std::add_lvalue_reference;
 using std::add_rvalue_reference;
+using std::add_volatile;
 using std::conditional;
 using std::decay;
 using std::enable_if;
@@ -57,7 +59,9 @@ using std::remove_reference;
 
 using std::add_const_t;
 using std::add_pointer_t;
+using std::add_lvalue_reference_t;
 using std::add_rvalue_reference_t;
+using std::add_volatile_t;
 using std::conditional_t;
 using std::decay_t;
 using std::enable_if_t;
@@ -75,7 +79,13 @@ template <typename T>
 using add_pointer_t = typename add_pointer<T>::type;
 
 template <typename T>
+using add_lvalue_reference_t = typename add_lvalue_reference<T>::type;
+
+template <typename T>
 using add_rvalue_reference_t = typename add_rvalue_reference<T>::type;
+
+template <typename T>
+using add_volatile_t = typename add_volatile<T>::type;
 
 template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
@@ -231,6 +241,81 @@ struct remove_member_pointer<T, enable_if_t<std::is_member_object_pointer<T>::va
 
 template <typename T>
 using remove_member_pointer_t = typename remove_member_pointer<T>::type;
+
+//-----------------------------------------------------------------------------
+// copy_const [P1450]
+//
+// Let Rhs be const if Lhs is const
+
+template <typename Lhs, typename Rhs>
+struct copy_const
+    : conditional<std::is_const<Lhs>::value,
+                  add_const_t<Rhs>,
+                  Rhs>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using copy_const_t = typename copy_const<Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
+// copy_volatile [P1450]
+//
+// Let Rhs be volatile if Rhs is volatile
+
+template <typename Lhs, typename Rhs>
+struct copy_volatile
+    : conditional<std::is_volatile<Lhs>::value,
+                  add_volatile_t<Rhs>,
+                  Rhs>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using copy_volatile_t = typename copy_volatile<Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
+// copy_cv [P1450]
+
+template <typename Lhs, typename Rhs>
+struct copy_cv
+    : copy_volatile<Lhs, copy_const_t<Lhs, Rhs>>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using copy_cv_t = typename copy_cv<Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
+// copy_reference [P1450]
+
+template <typename Lhs, typename Rhs>
+struct copy_reference
+    : conditional<std::is_lvalue_reference<Lhs>::value,
+                  add_lvalue_reference_t<Rhs>,
+                  conditional_t<std::is_rvalue_reference<Lhs>::value,
+                                add_rvalue_reference_t<Rhs>,
+                                Rhs>>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using copy_reference_t = typename copy_reference<Lhs, Rhs>::type;
+
+//-----------------------------------------------------------------------------
+// copy_cvref [P1450]
+
+template <typename Lhs, typename Rhs>
+struct copy_cvref
+    : copy_reference<Lhs,
+                     copy_reference_t<Rhs,
+                                      copy_cv_t<remove_reference_t<Lhs>,
+                                                remove_reference_t<Rhs>>>>
+{
+};
+
+template <typename Lhs, typename Rhs>
+using copy_cvref_t = typename copy_cvref<Lhs, Rhs>::type;
 
 //-----------------------------------------------------------------------------
 // void_t [N3911]
