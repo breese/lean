@@ -36,14 +36,14 @@ using function_return_t = typename function_return<T>::type;
 template <template <typename...> class, typename, typename = void>
 struct function_arguments;
 
-template <template <typename...> class Pack, typename T>
-struct function_arguments<Pack, T, enable_if_t<std::is_function<T>::value>>
+template <template <typename...> class Tuple, typename T>
+struct function_arguments<Tuple, T, enable_if_t<std::is_function<T>::value>>
 {
-    using type = pack_rebind_t<Pack<>, typename v1::detail::function_traits<T>::arguments>;
+    using type = proto_rebind_t<Tuple<>, typename v1::detail::function_traits<T>::arguments>;
 };
 
-template <template <typename...> class Pack, typename T>
-using function_arguments_t = typename function_arguments<Pack, T>::type;
+template <template <typename...> class Tuple, typename T>
+using function_arguments_t = typename function_arguments<Tuple, T>::type;
 
 //-----------------------------------------------------------------------------
 // is_function_const

@@ -20,7 +20,7 @@ namespace lean
 // Type-list
 
 template <typename...>
-struct pack;
+struct proto;
 
 //-----------------------------------------------------------------------------
 // bool_constant [N4389]
@@ -657,23 +657,22 @@ template <typename... Types>
 using type_find_max = type_find_max_with<type_identity_t, Types...>;
 
 //-----------------------------------------------------------------------------
-// pack_rebind
+// proto_rebind
 //
 // Type alias for Lhs<RhsTypes...> given Lhs<LhsTypes...> and Rhs<RhsTypes...>.
 
 template <typename, typename>
-struct pack_rebind;
+struct proto_rebind;
 
 template <template <typename...> class Lhs, typename... LhsTypes,
           template <typename...> class Rhs, typename... RhsTypes>
-struct pack_rebind<Lhs<LhsTypes...>,
-                   Rhs<RhsTypes...>>
+struct proto_rebind<Lhs<LhsTypes...>, Rhs<RhsTypes...>>
 {
     using type = Lhs<RhsTypes...>;
 };
 
 template <typename Lhs, typename Rhs>
-using pack_rebind_t = typename pack_rebind<Lhs, Rhs>::type;
+using proto_rebind_t = typename proto_rebind<Lhs, Rhs>::type;
 
 } // namespace lean
 

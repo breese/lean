@@ -28,7 +28,7 @@ template <typename, typename = void>
 struct invoke_overload;
 
 template <typename F, typename... Args>
-struct invoke_overload<pack<F, Args...>,
+struct invoke_overload<proto<F, Args...>,
                        void_t<decltype(std::declval<F>()(std::declval<Args>()...))>>
 {
     template <typename... CallArgs>
@@ -41,7 +41,7 @@ struct invoke_overload<pack<F, Args...>,
 };
 
 template <typename F, typename... Args>
-struct invoke_overload<pack<F, Args...>,
+struct invoke_overload<proto<F, Args...>,
                        void_t<decltype(std::mem_fn(std::declval<F>())(std::declval<Args>()...))>>
 {
     template <typename... CallArgs>
@@ -57,10 +57,10 @@ struct invoke_overload<pack<F, Args...>,
 
 template <typename F, typename... Args>
 auto invoke(F&& fn, Args&&... args)
-    noexcept(noexcept(invoke_overload<pack<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...)))
-    -> decltype(invoke_overload<pack<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...))
+    noexcept(noexcept(invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...)))
+    -> decltype(invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...))
 {
-    return invoke_overload<pack<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...);
+    return invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...);
 }
 
 //-----------------------------------------------------------------------------
@@ -69,7 +69,7 @@ template <typename, typename = void>
 struct is_invocable : public std::false_type {};
 
 template <typename F, typename... Args>
-struct is_invocable<pack<F, Args...>,
+struct is_invocable<proto<F, Args...>,
                     void_t<decltype(invoke(std::declval<F>(), std::declval<Args>()...))>>
     : public std::true_type
 {
@@ -81,8 +81,8 @@ template <typename, typename = void>
 struct is_nothrow_invocable : public std::false_type {};
 
 template <typename F, typename... Args>
-struct is_nothrow_invocable<pack<F, Args...>,
-                            enable_if_t<is_invocable<pack<F, Args...>>::value>>
+struct is_nothrow_invocable<proto<F, Args...>,
+                            enable_if_t<is_invocable<proto<F, Args...>>::value>>
     : public std::integral_constant<bool,
                                     noexcept(invoke(std::declval<F>(), std::declval<Args>()...))>
 {
@@ -94,10 +94,10 @@ template <typename, typename = void>
 struct invoke_result;
 
 template <typename F, typename... Args>
-struct invoke_result<pack<F, Args...>,
-                     enable_if_t<is_invocable<pack<F, Args...>>::value>>
+struct invoke_result<proto<F, Args...>,
+                     enable_if_t<is_invocable<proto<F, Args...>>::value>>
 {
-    using type = decltype(invoke_overload<pack<F, Args...>>::invoke(std::declval<F>(), std::declval<Args>()...));
+    using type = decltype(invoke_overload<proto<F, Args...>>::invoke(std::declval<F>(), std::declval<Args>()...));
 };
 
 } // namespace detail

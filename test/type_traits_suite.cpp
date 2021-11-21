@@ -586,21 +586,21 @@ static_assert(lean::type_find_max<constant<3>, constant<1>, constant<2>>() == 0,
 
 //-----------------------------------------------------------------------------
 
-namespace pack_rebind_suite
+namespace proto_rebind_suite
 {
 
-template <typename...> struct test_pack;
+template <typename...> struct test_tuple;
 
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<>>, test_pack<>>{}, "");
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool>>, test_pack<bool>>{}, "");
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool, int>>, test_pack<bool, int>>{}, "");
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<>, lean::pack<bool, int, float>>, test_pack<bool, int, float>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<>>, test_tuple<>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool>>, test_tuple<bool>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool, int>>, test_tuple<bool, int>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool, int, float>>, test_tuple<bool, int, float>>{}, "");
 
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool>, lean::pack<>>, test_pack<>>{}, "");
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool, int>, lean::pack<>>, test_pack<>>{}, "");
-static_assert(std::is_same<lean::pack_rebind_t<test_pack<bool, int, float>, lean::pack<>>, test_pack<>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool>, lean::proto<>>, test_tuple<>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool, int>, lean::proto<>>, test_tuple<>>{}, "");
+static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool, int, float>, lean::proto<>>, test_tuple<>>{}, "");
 
-} // namespace pack_rebind_suite
+} // namespace proto_rebind_suite
 
 //-----------------------------------------------------------------------------
 

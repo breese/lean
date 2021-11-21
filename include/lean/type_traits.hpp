@@ -106,7 +106,7 @@ namespace v1
 
 template <typename F, typename... Args>
 struct is_invocable
-    : public detail::is_invocable<pack<F, Args...>>::type
+    : public detail::is_invocable<proto<F, Args...>>::type
 {
 };
 
@@ -117,13 +117,13 @@ struct is_invocable
 
 template <typename F, typename... Args>
 struct is_nothrow_invocable
-    : public detail::is_nothrow_invocable<pack<F, Args...>>::type
+    : public detail::is_nothrow_invocable<proto<F, Args...>>::type
 {
 };
 
 template <typename F, typename... Args>
 struct invoke_result
-    : detail::invoke_result<pack<F, Args...>>
+    : detail::invoke_result<proto<F, Args...>>
 {
 };
 
