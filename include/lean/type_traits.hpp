@@ -99,38 +99,6 @@ using std::invoke_result_t;
 
 namespace lean
 {
-namespace v1
-{
-
-// Checks if function type can be invoked with given arguments.
-
-template <typename F, typename... Args>
-struct is_invocable
-    : public detail::is_invocable<proto<F, Args...>>::type
-{
-};
-
-// Checks if function type can be invoked without throwing exceptions.
-//
-// The exception specification became part of the function type in C++17.
-// This check always returns false when compiled with earlier C++ standards.
-
-template <typename F, typename... Args>
-struct is_nothrow_invocable
-    : public detail::is_nothrow_invocable<proto<F, Args...>>::type
-{
-};
-
-template <typename F, typename... Args>
-struct invoke_result
-    : detail::invoke_result<proto<F, Args...>>
-{
-};
-
-template <typename F, typename... Args>
-using invoke_result_t = typename invoke_result<F, Args...>::type;
-
-} // namespace v1
 
 using v1::is_invocable;
 using v1::is_nothrow_invocable;

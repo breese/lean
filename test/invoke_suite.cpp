@@ -9,7 +9,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "test_assert.hpp"
-#include <lean/functional.hpp>
+#include <functional>
+#include <lean/detail/invoke_traits.hpp>
 
 //-----------------------------------------------------------------------------
 
@@ -42,14 +43,17 @@ struct mutable_function_object
 {
     specifier operator()() { return specifier_mutable; }
     specifier invoke() { return specifier_mutable; }
+    specifier lvalue_invoke() & { return specifier_mutable; }
+    specifier rvalue_invoke() && { return specifier_mutable; }
 };
 
 struct const_function_object
 {
-    specifier operator()() const { return specifier_const; }
-    specifier invoke() const { return specifier_const; }
+    constexpr specifier operator()() const { return specifier_const; }
+    constexpr specifier invoke() const { return specifier_const; }
+    constexpr specifier lvalue_invoke() const & { return specifier_const; }
+    constexpr specifier rvalue_invoke() const && { return specifier_const; }
 };
-
 
 //-----------------------------------------------------------------------------
 // is_invocable
@@ -57,7 +61,7 @@ struct const_function_object
 namespace is_invocable_suite
 {
 
-using lean::is_invocable;
+using lean::v1::is_invocable;
 
 // Function
 
@@ -183,6 +187,9 @@ static_assert(!is_invocable<void(function_object::*)() const && noexcept, const 
 static_assert(!is_invocable<void(function_object::*)() const && noexcept, const function_object&>(), "");
 static_assert( is_invocable<void(function_object::*)() const && noexcept, const function_object&&>(), "");
 
+static_assert( is_invocable<std::function<void()>>(), "");
+static_assert( is_invocable<std::function<int(short, long)>, short, long>(), "");
+
 } // namespace is_invocable_suite
 
 //-----------------------------------------------------------------------------
@@ -191,7 +198,7 @@ static_assert( is_invocable<void(function_object::*)() const && noexcept, const 
 namespace is_nothrow_invocable_suite
 {
 
-using lean::is_nothrow_invocable;
+using lean::v1::is_nothrow_invocable;
 
 // Function
 
@@ -312,6 +319,9 @@ static_assert(!is_nothrow_invocable<void(function_object::*)() const && noexcept
 static_assert(!is_nothrow_invocable<void(function_object::*)() const && noexcept, const function_object&>(), "");
 static_assert(noexcept_true == is_nothrow_invocable<void(function_object::*)() const && noexcept, const function_object&&>(), "");
 
+static_assert(!is_nothrow_invocable<std::function<void()>>(), "");
+static_assert(!is_nothrow_invocable<std::function<int(short, long)>, short, long>(), "");
+
 } // namespace is_nothrow_invocable_suite
 
 //-----------------------------------------------------------------------------
@@ -320,7 +330,7 @@ static_assert(noexcept_true == is_nothrow_invocable<void(function_object::*)() c
 namespace invoke_result_suite
 {
 
-using lean::invoke_result_t;
+using lean::v1::invoke_result_t;
 
 // Function
 
@@ -399,6 +409,13 @@ static_assert(std::is_same<invoke_result_t<void(function_object::*)() const & no
 static_assert(std::is_same<invoke_result_t<void(function_object::*)() const && noexcept, function_object&&>, void>(), "");
 static_assert(std::is_same<invoke_result_t<void(function_object::*)() const && noexcept, const function_object&&>, void>(), "");
 
+static_assert(std::is_same<invoke_result_t<std::function<void()>>, void>(), "");
+static_assert(std::is_same<invoke_result_t<std::function<int()>>, int>(), "");
+static_assert(std::is_same<invoke_result_t<std::function<int(short)>, short>, int>(), "");
+static_assert(std::is_same<invoke_result_t<std::function<int(short)>, int>, int>(), "");
+static_assert(std::is_same<invoke_result_t<std::function<int(short, long)>, short, long>, int>(), "");
+static_assert(std::is_same<invoke_result_t<std::function<int(short, long)>, int, int>, int>(), "");
+
 } // namespace invoke_result_suite
 
 //-----------------------------------------------------------------------------
@@ -406,50 +423,50 @@ static_assert(std::is_same<invoke_result_t<void(function_object::*)() const && n
 namespace invoke_suite
 {
 
-using lean::invoke;
+static_assert(lean::v1::invoke(&const_function_object::invoke, const_function_object{}) == specifier_const, "");
 
 void invoke_mutable_function_object()
 {
     {
         mutable_function_object object;
-        assert(invoke(object) == specifier_mutable);
+        assert(lean::v1::invoke(object) == specifier_mutable);
     }
     {
         mutable_function_object object;
-        assert(invoke(std::move(object)) == specifier_mutable);
+        assert(lean::v1::invoke(std::move(object)) == specifier_mutable);
     }
     {
         mutable_function_object object;
-        assert(invoke(&decltype(object)::operator(), object) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::operator(), object) == specifier_mutable);
     }
     {
         mutable_function_object object;
-        assert(invoke(&decltype(object)::invoke, object) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, object) == specifier_mutable);
     }
     {
         mutable_function_object object;
-        assert(invoke(&decltype(object)::invoke, std::move(object)) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, std::move(object)) == specifier_mutable);
     }
     {
         mutable_function_object object;
         decltype(object) *ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
     }
     {
         mutable_function_object object;
         decltype(object) * const ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
     }
 #if 0 // Must fail to compile
     {
         mutable_function_object object;
         const decltype(object) *ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
     }
     {
         mutable_function_object object;
         const decltype(object) * const ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_mutable);
     }
 #endif
 }
@@ -458,63 +475,63 @@ void invoke_const_function_object()
 {
     {
         const_function_object object;
-        assert(invoke(object) == specifier_const);
+        assert(lean::v1::invoke(object) == specifier_const);
     }
     {
         const_function_object object;
-        assert(invoke(std::move(object)) == specifier_const);
+        assert(lean::v1::invoke(std::move(object)) == specifier_const);
     }
     {
         const_function_object object;
-        assert(invoke(&decltype(object)::operator(), object) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::operator(), object) == specifier_const);
     }
     {
         const_function_object object;
-        assert(invoke(&decltype(object)::invoke, object) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, object) == specifier_const);
     }
     {
         const_function_object object;
-        assert(invoke(&decltype(object)::invoke, std::move(object)) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, std::move(object)) == specifier_const);
     }
     {
         const_function_object object;
         decltype(object) *ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_const);
     }
     {
         const_function_object object;
         decltype(object) * const ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_const);
     }
     {
         const_function_object object;
         const decltype(object) *ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_const);
     }
     {
         const_function_object object;
         const decltype(object) * const ptr = &object;
-        assert(invoke(&decltype(object)::invoke, ptr) == specifier_const);
+        assert(lean::v1::invoke(&decltype(object)::invoke, ptr) == specifier_const);
     }
 }
 
 void invoke_arithmetic()
 {
-    assert(invoke(std::plus<int>{}, 20, 2) == 22);
-    assert(invoke(std::minus<int>{}, 20, 2) == 18);
-    assert(invoke(std::multiplies<int>{}, 20, 2) == 40);
-    assert(invoke(std::divides<int>{}, 20, 2) == 10);
-    assert(invoke(std::modulus<int>{}, 20, 2) == 0);
-    assert(invoke(std::negate<int>{}, 20) == -20);
+    assert(lean::v1::invoke(std::plus<int>{}, 20, 2) == 22);
+    assert(lean::v1::invoke(std::minus<int>{}, 20, 2) == 18);
+    assert(lean::v1::invoke(std::multiplies<int>{}, 20, 2) == 40);
+    assert(lean::v1::invoke(std::divides<int>{}, 20, 2) == 10);
+    assert(lean::v1::invoke(std::modulus<int>{}, 20, 2) == 0);
+    assert(lean::v1::invoke(std::negate<int>{}, 20) == -20);
 }
 
 void invoke_comparison()
 {
-    assert( invoke(std::equal_to<int>{}, 20, 20));
-    assert(!invoke(std::equal_to<int>{}, 20, 2));
-    assert(!invoke(std::less<int>{}, 20, 20));
-    assert( invoke(std::less<int>{}, 2, 20));
-    assert(!invoke(std::less<int>{}, 20, 2));
+    assert( lean::v1::invoke(std::equal_to<int>{}, 20, 20));
+    assert(!lean::v1::invoke(std::equal_to<int>{}, 20, 2));
+    assert(!lean::v1::invoke(std::less<int>{}, 20, 20));
+    assert( lean::v1::invoke(std::less<int>{}, 2, 20));
+    assert(!lean::v1::invoke(std::less<int>{}, 20, 2));
 }
 
 void run()

@@ -11,84 +11,118 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <functional> // std::mem_fn
+#include <utility>
 #include <lean/detail/config.hpp>
 #include <lean/detail/type_traits.hpp>
+
+// Avoid <functional>
+// constexpr invocation from C++11
 
 namespace lean
 {
 namespace v1
 {
+
+//-----------------------------------------------------------------------------
+
 namespace detail
 {
 
-//-----------------------------------------------------------------------------
-
-template <typename, typename = void>
-struct invoke_overload;
+// Function object
 
 template <typename F, typename... Args>
-struct invoke_overload<proto<F, Args...>,
-                       void_t<decltype(std::declval<F>()(std::declval<Args>()...))>>
+constexpr auto call(F&& fn, Args&&... args)
+    noexcept(noexcept(std::forward<F>(fn)(std::forward<Args>(args)...)))
+    -> decltype(std::forward<F>(fn)(std::forward<Args>(args)...))
 {
-    template <typename... CallArgs>
-    static auto invoke(F fn, CallArgs&&... args)
-        noexcept(noexcept(fn(std::forward<CallArgs>(args)...)))
-        -> decltype(fn(std::forward<CallArgs>(args)...))
-    {
-        return fn(std::forward<CallArgs>(args)...);
-    }
-};
-
-template <typename F, typename... Args>
-struct invoke_overload<proto<F, Args...>,
-                       void_t<decltype(std::mem_fn(std::declval<F>())(std::declval<Args>()...))>>
-{
-    template <typename... CallArgs>
-    static auto invoke(F fn, CallArgs&&... args)
-        noexcept(noexcept(std::mem_fn(std::move(fn))(std::forward<CallArgs>(args)...)))
-        -> decltype(std::mem_fn(std::move(fn))(std::forward<CallArgs>(args)...))
-    {
-        return std::mem_fn(std::move(fn))(std::forward<CallArgs>(args)...);
-    }
-};
-
-//-----------------------------------------------------------------------------
-
-template <typename F, typename... Args>
-auto invoke(F&& fn, Args&&... args)
-    noexcept(noexcept(invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...)))
-    -> decltype(invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...))
-{
-    return invoke_overload<proto<F, Args...>>::invoke(std::forward<F>(fn), std::forward<Args>(args)...);
+    return std::forward<F>(fn)(std::forward<Args>(args)...);
 }
 
+// Member function with object reference
+
+template <typename T, typename C, typename F, typename... Args>
+constexpr auto call(T C::*fn, F&& object, Args&&... args)
+    noexcept(noexcept((std::declval<F>().*std::declval<T C::*>())(std::declval<Args>()...)))
+    -> decltype((std::declval<F>().*std::declval<T C::*>())(std::declval<Args>()...))
+{
+    return (std::forward<F>(object).*fn)(std::forward<Args>(args)...);
+}
+
+// Member function with object pointer
+
+template <typename T, typename C, typename F, typename... Args>
+constexpr auto call(T C::*fn, F *object, Args&&... args)
+    noexcept(noexcept(call(std::declval<T C::*>(), std::declval<F&>(), std::declval<Args>()...)))
+    -> decltype(call(std::declval<T C::*>(), std::declval<F&>(), std::declval<Args>()...))
+{
+    return call(fn, *object, std::forward<Args>(args)...);
+}
+
+} // namespace detail
+
 //-----------------------------------------------------------------------------
+// is_invocable
+//
+// Checks if callable type can be invoked with given arguments.
+
+namespace detail
+{
 
 template <typename, typename = void>
-struct is_invocable : public std::false_type {};
+struct is_invocable : std::false_type {};
 
 template <typename F, typename... Args>
 struct is_invocable<proto<F, Args...>,
-                    void_t<decltype(invoke(std::declval<F>(), std::declval<Args>()...))>>
-    : public std::true_type
+                    void_t<decltype(detail::call(std::declval<F>(), std::declval<Args>()...))>>
+    : std::true_type
+{
+};
+
+} // namespace detail
+
+template <typename F, typename... Args>
+struct is_invocable
+    : public detail::is_invocable<proto<F, Args...>>
 {
 };
 
 //-----------------------------------------------------------------------------
+// is_nothrow_invocable
+//
+// Checks if callable type can be invoked without throwing exceptions.
+//
+// The exception specification became part of the function type in C++17.
+// This check always returns false when compiled with earlier C++ standards.
+
+namespace detail
+{
 
 template <typename, typename = void>
-struct is_nothrow_invocable : public std::false_type {};
+struct is_nothrow_invocable : std::false_type {};
 
 template <typename F, typename... Args>
 struct is_nothrow_invocable<proto<F, Args...>,
                             enable_if_t<is_invocable<proto<F, Args...>>::value>>
-    : public std::integral_constant<bool,
-                                    noexcept(invoke(std::declval<F>(), std::declval<Args>()...))>
+    : std::integral_constant<bool,
+                             noexcept(detail::call(std::declval<F>(), std::declval<Args>()...))>
+{
+};
+
+} // namespace detail
+
+template <typename F, typename... Args>
+struct is_nothrow_invocable
+    : public detail::is_nothrow_invocable<proto<F, Args...>>
 {
 };
 
 //-----------------------------------------------------------------------------
+// invoke_result
+//
+// Deduces return type of callable type with given arguments.
+
+namespace detail
+{
 
 template <typename, typename = void>
 struct invoke_result;
@@ -97,10 +131,36 @@ template <typename F, typename... Args>
 struct invoke_result<proto<F, Args...>,
                      enable_if_t<is_invocable<proto<F, Args...>>::value>>
 {
-    using type = decltype(invoke_overload<proto<F, Args...>>::invoke(std::declval<F>(), std::declval<Args>()...));
+    using type = decltype(detail::call(std::declval<F>(), std::declval<Args>()...));
 };
 
 } // namespace detail
+
+template <typename F, typename... Args>
+struct invoke_result
+    : detail::invoke_result<proto<F, Args...>>
+{
+};
+
+template <typename F, typename... Args>
+using invoke_result_t = typename invoke_result<F, Args...>::type;
+
+//-----------------------------------------------------------------------------
+// invoke
+
+template <typename F, typename... Args>
+constexpr auto invoke(F&& fn, Args&&... args) noexcept(is_nothrow_invocable<F, Args...>())
+    -> invoke_result_t<F, Args...>
+{
+    return detail::call(std::forward<F>(fn), std::forward<Args>(args)...);
+}
+
+template <typename R, typename F, typename... Args>
+constexpr R invoke_r(F&& fn, Args&&... args) noexcept(is_nothrow_invocable<F, Args...>())
+{
+    return static_cast<R>(invoke(std::forward<F>(fn), std::forward<Args>(args)...));
+}
+
 } // namespace v1
 } // namespace lean
 
