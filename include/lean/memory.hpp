@@ -11,6 +11,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <cstddef> // std::max_align_t
 #include <new>
 #include <memory>
 #include <lean/detail/config.hpp>
@@ -101,24 +102,77 @@ void destroy_at(T* ptr)
 namespace detail
 {
 
-template <typename In, typename T>
-struct is_inplace_compatible
-    : public std::integral_constant<bool,
-                                    (sizeof(In) >= sizeof(T)) && (alignof(In) % alignof(T) == 0)>
+template <std::size_t Len, std::size_t Align, typename U>
+struct is_inplace_storage_compatible
+    : std::integral_constant<bool,
+                             (Len >= sizeof(U)) && (Align % alignof(U) == 0)>
+{
+};
+
+template <typename T, typename U>
+struct is_inplace_value_compatible
+    : is_inplace_storage_compatible<sizeof(T), alignof(T), U>
 {
 };
 
 } // namespace detail
 
-template <typename T>
+template <std::size_t Len, std::size_t Align = alignof(std::max_align_t)>
 struct inplace_storage {
-    using value_type = remove_const_t<T>;
+    using element_type = unsigned char;
+    using value_type = element_type[Len];
 
     constexpr inplace_storage() noexcept = default;
 
+    // Accessors
+
+    template <typename R>
+    LEAN_CONSTEXPR_CXX14
+    auto data() noexcept
+        -> enable_if_t<detail::is_inplace_storage_compatible<Len, Align, R>::value,
+                       add_pointer_t<R>>
+    {
+        return reinterpret_cast<add_pointer_t<R>>(&member.value);
+    }
+
+    template <typename R>
+    constexpr auto data() const noexcept
+        -> enable_if_t<detail::is_inplace_storage_compatible<Len, Align, R>::value,
+                       add_pointer_t<add_const_t<R>>>
+    {
+        return reinterpret_cast<add_pointer_t<add_const_t<R>>>(&member.value);
+    }
+
+private:
+    alignas (Align) struct member
+    {
+        constexpr member() noexcept = default;
+        constexpr member(const member&) noexcept = delete;
+        constexpr member(member&&) noexcept = delete;
+
+        template <typename... Args,
+                  typename = enable_if_t<!std::is_same<member, remove_cvref_t<type_front_t<Args...>>>::value>>
+        explicit constexpr member(Args&&... args)
+            : value(std::forward<Args>(args)...)
+        {
+        }
+
+        element_type value[Len];
+    } member;
+};
+
+//-----------------------------------------------------------------------------
+// inplace_value
+
+template <typename T>
+struct inplace_value {
+    using value_type = remove_const_t<T>;
+
+    constexpr inplace_value() noexcept = default;
+
     template <typename... Args,
-              typename = enable_if_t<!std::is_same<inplace_storage, remove_cvref_t<type_front_t<Args...>>>::value>>
-    explicit constexpr inplace_storage(Args&&... args)
+              typename = enable_if_t<!std::is_same<inplace_value, remove_cvref_t<type_front_t<Args...>>>::value>>
+    explicit constexpr inplace_value(Args&&... args)
         : member(std::forward<Args>(args)...)
     {
     }
@@ -128,7 +182,7 @@ struct inplace_storage {
     template <typename R = value_type>
     LEAN_CONSTEXPR_CXX14
     auto data() noexcept
-        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value,
+        -> enable_if_t<detail::is_inplace_value_compatible<value_type, R>::value,
                        add_pointer_t<R>>
     {
         return reinterpret_cast<add_pointer_t<R>>(&member.value);
@@ -136,7 +190,7 @@ struct inplace_storage {
 
     template <typename R = value_type>
     constexpr auto data() const noexcept
-        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value,
+        -> enable_if_t<detail::is_inplace_value_compatible<value_type, R>::value,
                        add_pointer_t<add_const_t<R>>>
     {
         return reinterpret_cast<add_pointer_t<add_const_t<R>>>(&member.value);
@@ -162,6 +216,9 @@ private:
     } member;
 };
 
+//-----------------------------------------------------------------------------
+// inplace_union
+
 template <typename... Types>
 struct inplace_union {
     using value_type = type_max_with_t<type_sizeof, Types...>;
@@ -180,7 +237,7 @@ struct inplace_union {
     template <typename R>
     LEAN_CONSTEXPR_CXX14
     auto data() noexcept
-        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
+        -> enable_if_t<detail::is_inplace_value_compatible<value_type, R>::value &&
                        type_contains<R, Types...>::value,
                        add_pointer_t<R>>
     {
@@ -189,7 +246,7 @@ struct inplace_union {
 
     template <typename R>
     constexpr auto data() const noexcept
-        -> enable_if_t<detail::is_inplace_compatible<value_type, R>::value &&
+        -> enable_if_t<detail::is_inplace_value_compatible<value_type, R>::value &&
                        type_contains<R, Types...>::value,
                        add_pointer_t<add_const_t<R>>>
     {
@@ -197,7 +254,7 @@ struct inplace_union {
     }
 
 private:
-    inplace_storage<value_type> member;
+    inplace_value<value_type> member;
 };
 
 } // namespace v1
@@ -207,6 +264,7 @@ private:
 using v1::construct_at;
 using v1::destroy_at;
 using v1::inplace_storage;
+using v1::inplace_value;
 using v1::inplace_union;
 
 } // namespace lean

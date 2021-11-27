@@ -123,34 +123,85 @@ namespace inplace_storage_suite
 
 using namespace lean::v1;
 
-static_assert(std::is_nothrow_default_constructible<inplace_storage<int>>(),
+static_assert(std::is_nothrow_default_constructible<inplace_storage<sizeof(int)>>(),
               "default constructible");
-static_assert(!std::is_copy_constructible<inplace_storage<int>>(),
+static_assert(std::is_nothrow_default_constructible<inplace_storage<sizeof(int), alignof(int)>>(),
+              "default constructible");
+static_assert(!std::is_copy_constructible<inplace_storage<sizeof(int)>>(),
               "not copyable");
-static_assert(!std::is_move_constructible<inplace_storage<int>>(),
+static_assert(!std::is_copy_constructible<inplace_storage<sizeof(int), alignof(int)>>(),
+              "not copyable");
+static_assert(!std::is_move_constructible<inplace_storage<sizeof(int)>>(),
+              "not movable");
+static_assert(!std::is_move_constructible<inplace_storage<sizeof(int), alignof(int)>>(),
               "not movable");
 
-static_assert(std::is_same<typename inplace_storage<int>::value_type, int>(), "");
-static_assert(std::is_same<typename inplace_storage<const int>::value_type, int>(), "");
+void api_construct()
+{
+    {
+        inplace_storage<sizeof(int)> storage;
+        (void)storage; // Uninitialized, nothing to destroy
+    }
+    {
+        inplace_storage<sizeof(int), alignof(int)> storage;
+        (void)storage; // Uninitialized, nothing to destroy
+    }
+    {
+        inplace_storage<sizeof(int)> storage;
+        construct_at(storage.data<int>(), 42);
+        assert(*storage.data<int>() == 42);
+        destroy_at(storage.data<int>());
+    }
+    {
+        inplace_storage<sizeof(int), alignof(int)> storage;
+        construct_at(storage.data<int>(), 42);
+        assert(*storage.data<int>() == 42);
+        destroy_at(storage.data<int>());
+    }
+}
+
+void run()
+{
+    api_construct();
+}
+
+} // namespace inplace_storage_suite
+
+//-----------------------------------------------------------------------------
+
+namespace inplace_value_suite
+{
+
+using namespace lean::v1;
+
+static_assert(std::is_nothrow_default_constructible<inplace_value<int>>(),
+              "default constructible");
+static_assert(!std::is_copy_constructible<inplace_value<int>>(),
+              "not copyable");
+static_assert(!std::is_move_constructible<inplace_value<int>>(),
+              "not movable");
+
+static_assert(std::is_same<typename inplace_value<int>::value_type, int>(), "");
+static_assert(std::is_same<typename inplace_value<const int>::value_type, int>(), "");
 
 void api_construct_default()
 {
     {
-        inplace_storage<int> storage;
+        inplace_value<int> storage;
         (void)storage; // Uninitialized, nothing to destroy
     }
     {
-        inplace_storage<const int> storage;
+        inplace_value<const int> storage;
         (void)storage; // Uninitialized, nothing to destroy
     }
     {
-        inplace_storage<int> storage;
+        inplace_value<int> storage;
         construct_at(storage.data(), 42);
         assert(*storage.data() == 42);
         destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage;
+        inplace_value<const int> storage;
         construct_at(storage.data(), 42);
         assert(*storage.data() == 42);
         destroy_at(storage.data());
@@ -160,12 +211,12 @@ void api_construct_default()
 void api_construct_value()
 {
     {
-        inplace_storage<int> storage(42);
+        inplace_value<int> storage(42);
         assert(*storage.data() == 42);
         destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage(42);
+        inplace_value<const int> storage(42);
         assert(*storage.data() == 42);
         destroy_at(storage.data());
     }
@@ -174,8 +225,8 @@ void api_construct_value()
 void api_copy()
 {
     {
-        inplace_storage<int> storage(42);
-        inplace_storage<int> clone;
+        inplace_value<int> storage(42);
+        inplace_value<int> clone;
         construct_at(clone.data(), *storage.data());
         assert(*storage.data() == 42);
         assert(*clone.data() == 42);
@@ -183,8 +234,8 @@ void api_copy()
         destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage(42);
-        inplace_storage<const int> clone;
+        inplace_value<const int> storage(42);
+        inplace_value<const int> clone;
         construct_at(clone.data(), *storage.data());
         assert(*storage.data() == 42);
         assert(*clone.data() == 42);
@@ -196,18 +247,18 @@ void api_copy()
 void api_move()
 {
     {
-        inplace_storage<int> storage(42);
+        inplace_value<int> storage(42);
         assert(*storage.data() == 42);
-        inplace_storage<int> clone;
+        inplace_value<int> clone;
         construct_at(clone.data(), std::move(*storage.data()));
         assert(*clone.data() == 42);
         destroy_at(clone.data());
         destroy_at(storage.data());
     }
     {
-        inplace_storage<const int> storage(42);
+        inplace_value<const int> storage(42);
         assert(*storage.data() == 42);
-        inplace_storage<const int> clone;
+        inplace_value<const int> clone;
         construct_at(clone.data(), std::move(*storage.data()));
         assert(*clone.data() == 42);
         destroy_at(clone.data());
@@ -223,7 +274,7 @@ void run()
     api_move();
 }
 
-} // namespace inplace_storage_suite
+} // namespace inplace_value_suite
 
 //-----------------------------------------------------------------------------
 
@@ -294,6 +345,7 @@ int main()
 {
     construct_suite::run();
     inplace_storage_suite::run();
+    inplace_value_suite::run();
     inplace_union_suite::run();
     return 0;
 }
