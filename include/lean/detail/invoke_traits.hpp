@@ -32,8 +32,8 @@ namespace detail
 
 template <typename F, typename... Args>
 constexpr auto call(F&& fn, Args&&... args)
-    noexcept(noexcept(std::forward<F>(fn)(std::forward<Args>(args)...)))
-    -> decltype(std::forward<F>(fn)(std::forward<Args>(args)...))
+    noexcept(noexcept(std::declval<F>()(std::declval<Args>()...)))
+    -> decltype(std::declval<F>()(std::declval<Args>()...))
 {
     return std::forward<F>(fn)(std::forward<Args>(args)...);
 }
