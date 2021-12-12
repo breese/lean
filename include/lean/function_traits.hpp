@@ -197,6 +197,24 @@ template <typename T>
 using is_function_reference_t = typename is_function_reference<T>::type;
 
 //-----------------------------------------------------------------------------
+// is_function_ellipsis
+
+template <typename T, typename = void>
+struct is_function_ellipsis
+    : std::false_type
+{
+};
+
+template <typename T>
+struct is_function_ellipsis<T, enable_if_t<is_function<T>::value>>
+    : v1::detail::function_traits<T>::is_ellipsis
+{
+};
+
+template <typename T>
+using is_function_ellipsis_t = typename is_function_ellipsis<T>::type;
+
+//-----------------------------------------------------------------------------
 // add_function_const
 //
 // Adds const qualifier to function type.
@@ -297,6 +315,24 @@ template <typename T>
 using add_function_rvalue_reference_t = typename add_function_rvalue_reference<T>::type;
 
 //-----------------------------------------------------------------------------
+// add_function_ellipsis
+
+template <typename T, typename = void>
+struct add_function_ellipsis
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_ellipsis<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::add_ellipsis;
+};
+
+template <typename T>
+using add_function_ellipsis_t = typename add_function_ellipsis<T>::type;
+
+//-----------------------------------------------------------------------------
 // remove_function_const
 //
 // Removes const qualifier from function type.
@@ -384,6 +420,25 @@ struct remove_function_cvref
 
 template <typename T>
 using remove_function_cvref_t = typename remove_function_cvref<T>::type;
+
+//-----------------------------------------------------------------------------
+// remove_function_ellipsis
+
+template <typename T, typename = void>
+struct remove_function_ellipsis
+{
+    using type = T;
+};
+
+template <typename T>
+struct remove_function_ellipsis<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::remove_ellipsis;
+};
+
+template <typename T>
+using remove_function_ellipsis_t = typename remove_function_ellipsis<T>::type;
+
 
 } // namespace lean
 

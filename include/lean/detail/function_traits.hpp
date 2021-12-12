@@ -33,15 +33,18 @@ struct function_traits<R(Args...)>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const;
     using add_volatile = R(Args...) volatile;
     using add_lvalue_reference = R(Args...) &;
     using add_rvalue_reference = R(Args...) &&;
+    using add_ellipsis = R(Args..., ...);
 
     using remove_const = R(Args...);
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...);
+    using remove_ellipsis = R(Args...);
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...);
@@ -57,15 +60,18 @@ struct function_traits<R(Args...) const>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const;
     using add_volatile = R(Args...) const volatile;
     using add_lvalue_reference = R(Args...) const &;
     using add_rvalue_reference = R(Args...) const &&;
+    using add_ellipsis = R(Args..., ...) const;
 
     using remove_const = R(Args...);
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const;
+    using remove_ellipsis = R(Args...) const;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const;
@@ -81,15 +87,18 @@ struct function_traits<R(Args...) const &>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const &;
     using add_volatile = R(Args...) const volatile &;
     using add_lvalue_reference = R(Args...) const &;
     using add_rvalue_reference = R(Args...) const &&;
+    using add_ellipsis = R(Args..., ...) const &;
 
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const;
+    using remove_ellipsis = R(Args...) const &;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const &;
@@ -105,15 +114,18 @@ struct function_traits<R(Args...) const &&>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const &&;
     using add_volatile = R(Args...) const volatile &&;
     using add_lvalue_reference = R(Args...) const &;
     using add_rvalue_reference = R(Args...) const &&;
+    using add_ellipsis = R(Args..., ...) const &&;
 
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const;
+    using remove_ellipsis = R(Args...) const &&;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const &&;
@@ -129,15 +141,18 @@ struct function_traits<R(Args...) const volatile>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile;
     using add_volatile = R(Args...) const volatile;
     using add_lvalue_reference = R(Args...) const volatile &;
     using add_rvalue_reference = R(Args...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile;
 
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile;
@@ -153,15 +168,18 @@ struct function_traits<R(Args...) const volatile &>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile &;
     using add_volatile = R(Args...) const volatile &;
     using add_lvalue_reference = R(Args...) const volatile &;
     using add_rvalue_reference = R(Args...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile &;
 
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile &;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile &;
@@ -177,15 +195,18 @@ struct function_traits<R(Args...) const volatile &&>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile &&;
     using add_volatile = R(Args...) const volatile &&;
     using add_lvalue_reference = R(Args...) const volatile &;
     using add_rvalue_reference = R(Args...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile &&;
 
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile &&;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile &&;
@@ -201,15 +222,18 @@ struct function_traits<R(Args...) volatile>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile;
     using add_volatile = R(Args...) volatile;
     using add_lvalue_reference = R(Args...) volatile &;
     using add_rvalue_reference = R(Args...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile;
 
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...) volatile;
+    using remove_ellipsis = R(Args...) volatile;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile;
@@ -225,15 +249,18 @@ struct function_traits<R(Args...) volatile &>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile &;
     using add_volatile = R(Args...) volatile &;
     using add_lvalue_reference = R(Args...) volatile &;
     using add_rvalue_reference = R(Args...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile &;
 
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...) volatile;
+    using remove_ellipsis = R(Args...) volatile &;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile &;
@@ -249,15 +276,18 @@ struct function_traits<R(Args...) volatile &&>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile &&;
     using add_volatile = R(Args...) volatile &&;
     using add_lvalue_reference = R(Args...) volatile &;
     using add_rvalue_reference = R(Args...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile &&;
 
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...) volatile;
+    using remove_ellipsis = R(Args...) volatile &&;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile &&;
@@ -273,15 +303,18 @@ struct function_traits<R(Args...) &>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const &;
     using add_volatile = R(Args...) volatile &;
     using add_lvalue_reference = R(Args...) &;
     using add_rvalue_reference = R(Args...) &&;
+    using add_ellipsis = R(Args..., ...) &;
 
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...);
+    using remove_ellipsis = R(Args...) &;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) &;
@@ -297,18 +330,347 @@ struct function_traits<R(Args...) &&>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const &&;
     using add_volatile = R(Args...) volatile &&;
     using add_lvalue_reference = R(Args...) &;
     using add_rvalue_reference = R(Args...) &&;
+    using add_ellipsis = R(Args..., ...) &&;
 
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...);
+    using remove_ellipsis = R(Args...) &&;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) &&;
+};
+
+// Ellipsis
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...)>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const;
+    using add_volatile = R(Args..., ...) volatile;
+    using add_lvalue_reference = R(Args..., ...) &;
+    using add_rvalue_reference = R(Args..., ...) &&;
+    using add_ellipsis = R(Args..., ...);
+
+    using remove_const = R(Args..., ...);
+    using remove_volatile = R(Args..., ...);
+    using remove_reference = R(Args..., ...);
+    using remove_ellipsis = R(Args...);
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...);
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const;
+    using add_volatile = R(Args..., ...) const volatile;
+    using add_lvalue_reference = R(Args..., ...) const &;
+    using add_rvalue_reference = R(Args..., ...) const &&;
+    using add_ellipsis = R(Args..., ...) const;
+
+    using remove_const = R(Args..., ...);
+    using remove_volatile = R(Args..., ...) const;
+    using remove_reference = R(Args..., ...) const;
+    using remove_ellipsis = R(Args...) const;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const &>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const &;
+    using add_volatile = R(Args..., ...) const volatile &;
+    using add_lvalue_reference = R(Args..., ...) const &;
+    using add_rvalue_reference = R(Args..., ...) const &&;
+    using add_ellipsis = R(Args..., ...) const &;
+
+    using remove_const = R(Args..., ...) &;
+    using remove_volatile = R(Args..., ...) const &;
+    using remove_reference = R(Args..., ...) const;
+    using remove_ellipsis = R(Args...) const &;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const &;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const &&>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const &&;
+    using add_volatile = R(Args..., ...) const volatile &&;
+    using add_lvalue_reference = R(Args..., ...) const &;
+    using add_rvalue_reference = R(Args..., ...) const &&;
+    using add_ellipsis = R(Args..., ...) const &&;
+
+    using remove_const = R(Args..., ...) &&;
+    using remove_volatile = R(Args..., ...) const &&;
+    using remove_reference = R(Args..., ...) const;
+    using remove_ellipsis = R(Args...) const &&;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const &&;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile;
+    using add_volatile = R(Args..., ...) const volatile;
+    using add_lvalue_reference = R(Args..., ...) const volatile &;
+    using add_rvalue_reference = R(Args..., ...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile;
+
+    using remove_const = R(Args..., ...) volatile;
+    using remove_volatile = R(Args..., ...) const;
+    using remove_reference = R(Args..., ...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile &>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile &;
+    using add_volatile = R(Args..., ...) const volatile &;
+    using add_lvalue_reference = R(Args..., ...) const volatile &;
+    using add_rvalue_reference = R(Args..., ...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile &;
+
+    using remove_const = R(Args..., ...) volatile &;
+    using remove_volatile = R(Args..., ...) const &;
+    using remove_reference = R(Args..., ...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile &;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile &;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile &&>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile &&;
+    using add_volatile = R(Args..., ...) const volatile &&;
+    using add_lvalue_reference = R(Args..., ...) const volatile &;
+    using add_rvalue_reference = R(Args..., ...) const volatile &&;
+    using add_ellipsis = R(Args..., ...) const volatile &&;
+
+    using remove_const = R(Args..., ...) volatile &&;
+    using remove_volatile = R(Args..., ...) const &&;
+    using remove_reference = R(Args..., ...) const volatile;
+    using remove_ellipsis = R(Args...) const volatile &&;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile &&;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile;
+    using add_volatile = R(Args..., ...) volatile;
+    using add_lvalue_reference = R(Args..., ...) volatile &;
+    using add_rvalue_reference = R(Args..., ...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile;
+
+    using remove_const = R(Args..., ...) volatile;
+    using remove_volatile = R(Args..., ...);
+    using remove_reference = R(Args..., ...) volatile;
+    using remove_ellipsis = R(Args...) volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile &>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile &;
+    using add_volatile = R(Args..., ...) volatile &;
+    using add_lvalue_reference = R(Args..., ...) volatile &;
+    using add_rvalue_reference = R(Args..., ...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile &;
+
+    using remove_const = R(Args..., ...) volatile &;
+    using remove_volatile = R(Args..., ...) &;
+    using remove_reference = R(Args..., ...) volatile;
+    using remove_ellipsis = R(Args...) volatile &;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile &;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile &&>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile &&;
+    using add_volatile = R(Args..., ...) volatile &&;
+    using add_lvalue_reference = R(Args..., ...) volatile &;
+    using add_rvalue_reference = R(Args..., ...) volatile &&;
+    using add_ellipsis = R(Args..., ...) volatile &&;
+
+    using remove_const = R(Args..., ...) volatile &&;
+    using remove_volatile = R(Args..., ...) &&;
+    using remove_reference = R(Args..., ...) volatile;
+    using remove_ellipsis = R(Args...) volatile &&;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile &&;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) &>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const &;
+    using add_volatile = R(Args..., ...) volatile &;
+    using add_lvalue_reference = R(Args..., ...) &;
+    using add_rvalue_reference = R(Args..., ...) &&;
+    using add_ellipsis = R(Args..., ...) &;
+
+    using remove_const = R(Args..., ...) &;
+    using remove_volatile = R(Args..., ...) &;
+    using remove_reference = R(Args..., ...);
+    using remove_ellipsis = R(Args...) &;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) &;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) &&>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const &&;
+    using add_volatile = R(Args..., ...) volatile &&;
+    using add_lvalue_reference = R(Args..., ...) &;
+    using add_rvalue_reference = R(Args..., ...) &&;
+    using add_ellipsis = R(Args..., ...) &&;
+
+    using remove_const = R(Args..., ...) &&;
+    using remove_volatile = R(Args..., ...) &&;
+    using remove_reference = R(Args..., ...);
+    using remove_ellipsis = R(Args...) &&;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) &&;
 };
 
 #if __cpp_noexcept_function_type >= 201510L
@@ -323,15 +685,18 @@ struct function_traits<R(Args...) noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const noexcept;
     using add_volatile = R(Args...) volatile noexcept;
     using add_lvalue_reference = R(Args...) & noexcept;
     using add_rvalue_reference = R(Args...) && noexcept;
+    using add_ellipsis = R(Args..., ...) noexcept;
 
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) noexcept;
+    using remove_ellipsis = R(Args...) noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) noexcept;
@@ -347,15 +712,18 @@ struct function_traits<R(Args...) const noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const noexcept;
     using add_volatile = R(Args...) const volatile noexcept;
     using add_lvalue_reference = R(Args...) const & noexcept;
     using add_rvalue_reference = R(Args...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const noexcept;
 
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const noexcept;
+    using remove_ellipsis = R(Args...) const noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const noexcept;
@@ -371,15 +739,18 @@ struct function_traits<R(Args...) const & noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const & noexcept;
     using add_volatile = R(Args...) const volatile & noexcept;
     using add_lvalue_reference = R(Args...) const & noexcept;
     using add_rvalue_reference = R(Args...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const & noexcept;
 
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const noexcept;
+    using remove_ellipsis = R(Args...) const & noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const & noexcept;
@@ -395,15 +766,18 @@ struct function_traits<R(Args...) const && noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const && noexcept;
     using add_volatile = R(Args...) const volatile && noexcept;
     using add_lvalue_reference = R(Args...) const & noexcept;
     using add_rvalue_reference = R(Args...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const && noexcept;
 
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const noexcept;
+    using remove_ellipsis = R(Args...) const && noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const && noexcept;
@@ -419,15 +793,18 @@ struct function_traits<R(Args...) const volatile noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile noexcept;
     using add_volatile = R(Args...) const volatile noexcept;
     using add_lvalue_reference = R(Args...) const volatile & noexcept;
     using add_rvalue_reference = R(Args...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile noexcept;
 
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile noexcept;
@@ -443,15 +820,18 @@ struct function_traits<R(Args...) const volatile & noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile & noexcept;
     using add_volatile = R(Args...) const volatile & noexcept;
     using add_lvalue_reference = R(Args...) const volatile & noexcept;
     using add_rvalue_reference = R(Args...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile & noexcept;
 
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile & noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile & noexcept;
@@ -467,15 +847,18 @@ struct function_traits<R(Args...) const volatile && noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile && noexcept;
     using add_volatile = R(Args...) const volatile && noexcept;
     using add_lvalue_reference = R(Args...) const volatile & noexcept;
     using add_rvalue_reference = R(Args...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile && noexcept;
 
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile && noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) const volatile && noexcept;
@@ -491,15 +874,18 @@ struct function_traits<R(Args...) volatile noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile noexcept;
     using add_volatile = R(Args...) volatile noexcept;
     using add_lvalue_reference = R(Args...) volatile & noexcept;
     using add_rvalue_reference = R(Args...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile noexcept;
 
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile noexcept;
@@ -515,15 +901,18 @@ struct function_traits<R(Args...) volatile & noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile & noexcept;
     using add_volatile = R(Args...) volatile & noexcept;
     using add_lvalue_reference = R(Args...) volatile & noexcept;
     using add_rvalue_reference = R(Args...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile & noexcept;
 
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile & noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile & noexcept;
@@ -539,15 +928,18 @@ struct function_traits<R(Args...) volatile && noexcept>
     using is_volatile = std::true_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const volatile && noexcept;
     using add_volatile = R(Args...) volatile && noexcept;
     using add_lvalue_reference = R(Args...) volatile & noexcept;
     using add_rvalue_reference = R(Args...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile && noexcept;
 
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile && noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) volatile && noexcept;
@@ -563,15 +955,18 @@ struct function_traits<R(Args...) & noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::true_type;
     using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const & noexcept;
     using add_volatile = R(Args...) volatile & noexcept;
     using add_lvalue_reference = R(Args...) & noexcept;
     using add_rvalue_reference = R(Args...) && noexcept;
+    using add_ellipsis = R(Args..., ...) & noexcept;
 
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) noexcept;
+    using remove_ellipsis = R(Args...) & noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) & noexcept;
@@ -587,18 +982,347 @@ struct function_traits<R(Args...) && noexcept>
     using is_volatile = std::false_type;
     using is_lvalue_reference = std::false_type;
     using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::false_type;
 
     using add_const = R(Args...) const && noexcept;
     using add_volatile = R(Args...) volatile && noexcept;
     using add_lvalue_reference = R(Args...) & noexcept;
     using add_rvalue_reference = R(Args...) && noexcept;
+    using add_ellipsis = R(Args..., ...) && noexcept;
 
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) noexcept;
+    using remove_ellipsis = R(Args...) && noexcept;
 
     template <typename RR, typename... RArgs>
     using rebind = RR(RArgs...) && noexcept;
+};
+
+// Ellipsis
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const noexcept;
+    using add_volatile = R(Args..., ...) volatile noexcept;
+    using add_lvalue_reference = R(Args..., ...) & noexcept;
+    using add_rvalue_reference = R(Args..., ...) && noexcept;
+    using add_ellipsis = R(Args..., ...) noexcept;
+
+    using remove_const = R(Args..., ...) noexcept;
+    using remove_volatile = R(Args..., ...) noexcept;
+    using remove_reference = R(Args..., ...) noexcept;
+    using remove_ellipsis = R(Args...) noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const noexcept;
+    using add_volatile = R(Args..., ...) const volatile noexcept;
+    using add_lvalue_reference = R(Args..., ...) const & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const noexcept;
+
+    using remove_const = R(Args..., ...) noexcept;
+    using remove_volatile = R(Args..., ...) const noexcept;
+    using remove_reference = R(Args..., ...) const noexcept;
+    using remove_ellipsis = R(Args...) const noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const & noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const & noexcept;
+    using add_volatile = R(Args..., ...) const volatile & noexcept;
+    using add_lvalue_reference = R(Args..., ...) const & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const & noexcept;
+
+    using remove_const = R(Args..., ...) & noexcept;
+    using remove_volatile = R(Args..., ...) const & noexcept;
+    using remove_reference = R(Args..., ...) const noexcept;
+    using remove_ellipsis = R(Args...) const & noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const & noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const && noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const && noexcept;
+    using add_volatile = R(Args..., ...) const volatile && noexcept;
+    using add_lvalue_reference = R(Args..., ...) const & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const && noexcept;
+    using add_ellipsis = R(Args..., ...) const && noexcept;
+
+    using remove_const = R(Args..., ...) && noexcept;
+    using remove_volatile = R(Args..., ...) const && noexcept;
+    using remove_reference = R(Args..., ...) const noexcept;
+    using remove_ellipsis = R(Args...) const && noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const && noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile noexcept;
+    using add_volatile = R(Args..., ...) const volatile noexcept;
+    using add_lvalue_reference = R(Args..., ...) const volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile noexcept;
+
+    using remove_const = R(Args..., ...) volatile noexcept;
+    using remove_volatile = R(Args..., ...) const noexcept;
+    using remove_reference = R(Args..., ...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile & noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile & noexcept;
+    using add_volatile = R(Args..., ...) const volatile & noexcept;
+    using add_lvalue_reference = R(Args..., ...) const volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile & noexcept;
+
+    using remove_const = R(Args..., ...) volatile & noexcept;
+    using remove_volatile = R(Args..., ...) const & noexcept;
+    using remove_reference = R(Args..., ...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile & noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile & noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) const volatile && noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::true_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile && noexcept;
+    using add_volatile = R(Args..., ...) const volatile && noexcept;
+    using add_lvalue_reference = R(Args..., ...) const volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) const volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) const volatile && noexcept;
+
+    using remove_const = R(Args..., ...) volatile && noexcept;
+    using remove_volatile = R(Args..., ...) const && noexcept;
+    using remove_reference = R(Args..., ...) const volatile noexcept;
+    using remove_ellipsis = R(Args...) const volatile && noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) const volatile && noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile noexcept;
+    using add_volatile = R(Args..., ...) volatile noexcept;
+    using add_lvalue_reference = R(Args..., ...) volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile noexcept;
+
+    using remove_const = R(Args..., ...) volatile noexcept;
+    using remove_volatile = R(Args..., ...) noexcept;
+    using remove_reference = R(Args..., ...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile & noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile & noexcept;
+    using add_volatile = R(Args..., ...) volatile & noexcept;
+    using add_lvalue_reference = R(Args..., ...) volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile & noexcept;
+
+    using remove_const = R(Args..., ...) volatile & noexcept;
+    using remove_volatile = R(Args..., ...) & noexcept;
+    using remove_reference = R(Args..., ...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile & noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile & noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) volatile && noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::true_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const volatile && noexcept;
+    using add_volatile = R(Args..., ...) volatile && noexcept;
+    using add_lvalue_reference = R(Args..., ...) volatile & noexcept;
+    using add_rvalue_reference = R(Args..., ...) volatile && noexcept;
+    using add_ellipsis = R(Args..., ...) volatile && noexcept;
+
+    using remove_const = R(Args..., ...) volatile && noexcept;
+    using remove_volatile = R(Args..., ...) && noexcept;
+    using remove_reference = R(Args..., ...) volatile noexcept;
+    using remove_ellipsis = R(Args...) volatile && noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) volatile && noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) & noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::true_type;
+    using is_rvalue_reference = std::false_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const & noexcept;
+    using add_volatile = R(Args..., ...) volatile & noexcept;
+    using add_lvalue_reference = R(Args..., ...) & noexcept;
+    using add_rvalue_reference = R(Args..., ...) && noexcept;
+    using add_ellipsis = R(Args..., ...) & noexcept;
+
+    using remove_const = R(Args..., ...) & noexcept;
+    using remove_volatile = R(Args..., ...) & noexcept;
+    using remove_reference = R(Args..., ...) noexcept;
+    using remove_ellipsis = R(Args...) & noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) & noexcept;
+};
+
+template <typename R, typename... Args>
+struct function_traits<R(Args..., ...) && noexcept>
+{
+    using return_type = R;
+    using arguments = prototype<Args...>;
+
+    using is_const = std::false_type;
+    using is_volatile = std::false_type;
+    using is_lvalue_reference = std::false_type;
+    using is_rvalue_reference = std::true_type;
+    using is_ellipsis = std::true_type;
+
+    using add_const = R(Args..., ...) const && noexcept;
+    using add_volatile = R(Args..., ...) volatile && noexcept;
+    using add_lvalue_reference = R(Args..., ...) & noexcept;
+    using add_rvalue_reference = R(Args..., ...) && noexcept;
+    using add_ellipsis = R(Args..., ...) && noexcept;
+
+    using remove_const = R(Args..., ...) && noexcept;
+    using remove_volatile = R(Args..., ...) && noexcept;
+    using remove_reference = R(Args..., ...) noexcept;
+    using remove_ellipsis = R(Args...) && noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs..., ...) && noexcept;
 };
 
 #endif
