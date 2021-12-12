@@ -107,6 +107,11 @@ template <typename T, typename R, typename Args>
 using function_rebind_t = typename function_rebind<T, R, Args>::type;
 
 //-----------------------------------------------------------------------------
+// is_function
+
+using std::is_function;
+
+//-----------------------------------------------------------------------------
 // is_function_const
 
 template <typename T, typename = void>
@@ -116,7 +121,7 @@ struct is_function_const
 };
 
 template <typename T>
-struct is_function_const<T, enable_if_t<std::is_function<T>::value>>
+struct is_function_const<T, enable_if_t<is_function<T>::value>>
     : v1::detail::function_traits<T>::is_const
 {
 };
@@ -134,7 +139,7 @@ struct is_function_volatile
 };
 
 template <typename T>
-struct is_function_volatile<T, enable_if_t<std::is_function<T>::value>>
+struct is_function_volatile<T, enable_if_t<is_function<T>::value>>
     : v1::detail::function_traits<T>::is_volatile
 {
 };
@@ -152,7 +157,7 @@ struct is_function_lvalue_reference
 };
 
 template <typename T>
-struct is_function_lvalue_reference<T, enable_if_t<std::is_function<T>::value>>
+struct is_function_lvalue_reference<T, enable_if_t<is_function<T>::value>>
     : v1::detail::function_traits<T>::is_lvalue_reference
 {
 };
@@ -170,7 +175,7 @@ struct is_function_rvalue_reference
 };
 
 template <typename T>
-struct is_function_rvalue_reference<T, enable_if_t<std::is_function<T>::value>>
+struct is_function_rvalue_reference<T, enable_if_t<is_function<T>::value>>
     : v1::detail::function_traits<T>::is_rvalue_reference
 {
 };
@@ -192,9 +197,109 @@ template <typename T>
 using is_function_reference_t = typename is_function_reference<T>::type;
 
 //-----------------------------------------------------------------------------
+// add_function_const
+//
+// Adds const qualifier to function type.
+//
+//   T                       | add_function_const_t<T>
+// --------------------------+----------------------------
+//  bool ()                  | bool() const
+//  bool () const            | bool() const
+//  bool () &                | bool() const &
+//  bool () noexcept         | bool() const noexcept
+//  bool () & noexcept       | bool() const & noexcept
+
+template <typename T, typename = void>
+struct add_function_const
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_const<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::add_const;
+};
+
+template <typename T>
+using add_function_const_t = typename add_function_const<T>::type;
+
+//-----------------------------------------------------------------------------
+// add_function_volatile
+
+template <typename T, typename = void>
+struct add_function_volatile
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_volatile<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::add_volatile;
+};
+
+template <typename T>
+using add_function_volatile_t = typename add_function_volatile<T>::type;
+
+//-----------------------------------------------------------------------------
+// add_function_cv
+
+template <typename T, typename = void>
+struct add_function_cv
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_cv<T, enable_if_t<is_function<T>::value>>
+    : add_function_volatile<add_function_const_t<T>>
+{
+};
+
+template <typename T>
+using add_function_cv_t = typename add_function_cv<T>::type;
+
+//-----------------------------------------------------------------------------
+// add_function_lvalue_reference
+
+template <typename T, typename = void>
+struct add_function_lvalue_reference
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_lvalue_reference<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::add_lvalue_reference;
+};
+
+template <typename T>
+using add_function_lvalue_reference_t = typename add_function_lvalue_reference<T>::type;
+
+//-----------------------------------------------------------------------------
+// add_function_rvalue_reference
+
+template <typename T, typename = void>
+struct add_function_rvalue_reference
+{
+    using type = T;
+};
+
+template <typename T>
+struct add_function_rvalue_reference<T, enable_if_t<is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::add_rvalue_reference;
+};
+
+template <typename T>
+using add_function_rvalue_reference_t = typename add_function_rvalue_reference<T>::type;
+
+//-----------------------------------------------------------------------------
 // remove_function_const
 //
-// Removes const from function type.
+// Removes const qualifier from function type.
 //
 //   T                       | remove_function_const_t<T>
 // --------------------------+----------------------------
@@ -211,7 +316,7 @@ struct remove_function_const
 };
 
 template <typename T>
-struct remove_function_const<T, enable_if_t<std::is_function<T>::value>>
+struct remove_function_const<T, enable_if_t<is_function<T>::value>>
 {
     using type = typename v1::detail::function_traits<T>::remove_const;
 };
@@ -230,7 +335,7 @@ struct remove_function_volatile
 };
 
 template <typename T>
-struct remove_function_volatile<T, enable_if_t<std::is_function<T>::value>>
+struct remove_function_volatile<T, enable_if_t<is_function<T>::value>>
 {
     using type = typename v1::detail::function_traits<T>::remove_volatile;
 };
@@ -260,7 +365,7 @@ struct remove_function_reference
 };
 
 template <typename T>
-struct remove_function_reference<T, enable_if_t<std::is_function<T>::value>>
+struct remove_function_reference<T, enable_if_t<is_function<T>::value>>
 {
     using type = typename v1::detail::function_traits<T>::remove_reference;
 };

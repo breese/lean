@@ -480,6 +480,189 @@ static_assert(!lean::is_function_reference_t<const bool&&>{}, "");
 
 //-----------------------------------------------------------------------------
 
+namespace suite_add_function_const
+{
+
+static_assert(std::is_same<lean::add_function_const_t<bool()>, bool() const>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const>, bool() const>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const &>, bool() const &>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const &&>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() &>, bool() const &>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() &&>, bool() const &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::add_function_const_t<bool() noexcept>, bool() const noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const noexcept>, bool() const noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const & noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const && noexcept>, bool() const && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() const volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() & noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_const_t<bool() && noexcept>, bool() const && noexcept>{}, "");
+
+#endif
+
+} // namespace suite_add_function_const
+
+//-----------------------------------------------------------------------------
+
+namespace suite_add_function_volatile
+{
+
+static_assert(std::is_same<lean::add_function_volatile_t<bool()>, bool() volatile>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile>, bool() volatile>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile &>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile &&>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() &>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() &&>, bool() volatile &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::add_function_volatile_t<bool() noexcept>, bool() volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() const volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile noexcept>, bool() volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile & noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() volatile && noexcept>, bool() volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() & noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_volatile_t<bool() && noexcept>, bool() volatile && noexcept>{}, "");
+
+#endif
+
+} // namespace suite_add_function_volatile
+
+//-----------------------------------------------------------------------------
+
+namespace suite_add_function_cv
+{
+
+static_assert(std::is_same<lean::add_function_cv_t<bool()>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile>, bool() const volatile>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() &&>, bool() const volatile &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::add_function_cv_t<bool() noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() const volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile noexcept>, bool() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_cv_t<bool() && noexcept>, bool() const volatile && noexcept>{}, "");
+
+#endif
+
+} // namespace suite_add_function_cv
+
+//-----------------------------------------------------------------------------
+
+namespace suite_add_function_lvalue_reference
+{
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool()>, bool() &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const>, bool() const &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const &>, bool() const &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const &&>, bool() const &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile &>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile &&>, bool() const volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile &>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile &&>, bool() volatile &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() &>, bool() &>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() &&>, bool() &>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() noexcept>, bool() & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const & noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const && noexcept>, bool() const & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile & noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() const volatile && noexcept>, bool() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile & noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() volatile && noexcept>, bool() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() & noexcept>, bool() & noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_lvalue_reference_t<bool() && noexcept>, bool() & noexcept>{}, "");
+
+#endif
+
+} // namespace suite_add_function_lvalue_reference
+
+//-----------------------------------------------------------------------------
+
+namespace suite_add_function_rvalue_reference
+{
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool()>, bool() &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const &>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const &&>, bool() const &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile &>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile &&>, bool() const volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile &>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile &&>, bool() volatile &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() &>, bool() &&>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() &&>, bool() &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() noexcept>, bool() && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const noexcept>, bool() const && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const & noexcept>, bool() const && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const && noexcept>, bool() const && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile & noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() const volatile && noexcept>, bool() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile noexcept>, bool() volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile & noexcept>, bool() volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() volatile && noexcept>, bool() volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() & noexcept>, bool() && noexcept>{}, "");
+static_assert(std::is_same<lean::add_function_rvalue_reference_t<bool() && noexcept>, bool() && noexcept>{}, "");
+
+#endif
+
+} // namespace suite_add_function_rvalue_reference
+
+//-----------------------------------------------------------------------------
+
 namespace suite_remove_function_const
 {
 
