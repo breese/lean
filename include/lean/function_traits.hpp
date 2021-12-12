@@ -12,9 +12,51 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <lean/detail/function_traits.hpp>
+#include <lean/detail/type_traits.hpp>
 
 namespace lean
 {
+
+//-----------------------------------------------------------------------------
+// function_type
+
+namespace impl {
+
+template <typename T, typename = void>
+struct function_type;
+
+template <typename T>
+struct function_type<T, enable_if_t<std::is_function<T>::value>> {
+    using type = T;
+};
+
+// Function pointer
+
+template <typename T>
+struct function_type<T *> : function_type<T> {};
+
+// Member function pointer
+
+template <typename T, typename C>
+struct function_type<T C::*> {
+    using type = T;
+};
+
+// Function object
+
+template <typename T>
+struct function_type<T, void_t<decltype(&T::operator())>>
+        : function_type<decltype(&T::operator())> {};
+
+} // namespace impl
+
+template <typename T>
+struct function_type {
+    using type = typename impl::function_type<remove_cvref_t<T>>::type;
+};
+
+template <typename T>
+using function_type_t = typename function_type<T>::type;
 
 //-----------------------------------------------------------------------------
 // function_return
