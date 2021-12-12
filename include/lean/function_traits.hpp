@@ -62,7 +62,7 @@ using function_type_t = typename function_type<T>::type;
 //-----------------------------------------------------------------------------
 // function_return
 
-template <typename T, typename = void>
+template <typename, typename = void>
 struct function_return;
 
 template <typename T>
@@ -87,6 +87,24 @@ struct function_arguments<Tuple, T, enable_if_t<std::is_function<T>::value>>
 
 template <template <typename...> class Tuple, typename T>
 using function_arguments_t = typename function_arguments<Tuple, T>::type;
+
+//-----------------------------------------------------------------------------
+// function_rebind
+
+template <typename, typename, typename, typename = void>
+struct function_rebind;
+
+template <typename T, typename R, template <typename...> class Tuple, typename... Types>
+struct function_rebind<T,
+                       R,
+                       Tuple<Types...>,
+                       enable_if_t<std::is_function<T>::value>>
+{
+    using type = typename v1::detail::function_traits<T>::template rebind<R, Types...>;
+};
+
+template <typename T, typename R, typename Args>
+using function_rebind_t = typename function_rebind<T, R, Args>::type;
 
 //-----------------------------------------------------------------------------
 // is_function_const

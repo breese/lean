@@ -216,6 +216,52 @@ static_assert(std::is_same<lean::function_arguments_t<argument_tuple, bool(bool,
 
 //-----------------------------------------------------------------------------
 
+namespace suite_function_rebind
+{
+
+static_assert(std::is_same<lean::function_rebind_t<void(), int, lean::prototype<bool>>, int(bool)>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const, int, lean::prototype<bool>>, int(bool) const>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const &, int, lean::prototype<bool>>, int(bool) const &>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const &&, int, lean::prototype<bool>>, int(bool) const &&>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile, int, lean::prototype<bool>>, int(bool) const volatile>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile &, int, lean::prototype<bool>>, int(bool) const volatile &>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile &&, int, lean::prototype<bool>>, int(bool) const volatile &&>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile, int, lean::prototype<bool>>, int(bool) volatile>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile &, int, lean::prototype<bool>>, int(bool) volatile &>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile &&, int, lean::prototype<bool>>, int(bool) volatile &&>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() &, int, lean::prototype<bool>>, int(bool) &>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() &&, int, lean::prototype<bool>>, int(bool) &&>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<lean::function_rebind_t<void() noexcept, int, lean::prototype<bool>>, int(bool) noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const noexcept, int, lean::prototype<bool>>, int(bool) const noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const & noexcept, int, lean::prototype<bool>>, int(bool) const & noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const && noexcept, int, lean::prototype<bool>>, int(bool) const && noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile noexcept, int, lean::prototype<bool>>, int(bool) const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile & noexcept, int, lean::prototype<bool>>, int(bool) const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() const volatile && noexcept, int, lean::prototype<bool>>, int(bool) const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile noexcept, int, lean::prototype<bool>>, int(bool) volatile noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile & noexcept, int, lean::prototype<bool>>, int(bool) volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() volatile && noexcept, int, lean::prototype<bool>>, int(bool) volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() & noexcept, int, lean::prototype<bool>>, int(bool) & noexcept>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void() && noexcept, int, lean::prototype<bool>>, int(bool) && noexcept>{}, "");
+
+#endif
+
+static_assert(std::is_same<lean::function_rebind_t<void(), void, lean::prototype<>>, void()>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void(), bool, lean::prototype<>>, bool()>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<bool(), void, lean::prototype<>>, void()>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<bool(), bool, lean::prototype<>>, bool()>{}, "");
+
+static_assert(std::is_same<lean::function_rebind_t<void(), void, lean::prototype<bool>>, void(bool)>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void(), void, lean::prototype<bool, int>>, void(bool, int)>{}, "");
+static_assert(std::is_same<lean::function_rebind_t<void(), void, lean::prototype<bool, int, float>>, void(bool, int, float)>{}, "");
+
+} // namespace suite_function_rebind
+
+//-----------------------------------------------------------------------------
+
 namespace suite_is_function_const
 {
 

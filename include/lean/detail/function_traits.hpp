@@ -37,6 +37,9 @@ struct function_traits<R(Args...)>
     using remove_const = R(Args...);
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...);
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...);
 };
 
 template <typename R, typename... Args>
@@ -53,6 +56,9 @@ struct function_traits<R(Args...) const>
     using remove_const = R(Args...);
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const;
 };
 
 template <typename R, typename... Args>
@@ -69,6 +75,9 @@ struct function_traits<R(Args...) const &>
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const &;
 };
 
 template <typename R, typename... Args>
@@ -85,6 +94,9 @@ struct function_traits<R(Args...) const &&>
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const &&;
 };
 
 template <typename R, typename... Args>
@@ -101,6 +113,9 @@ struct function_traits<R(Args...) const volatile>
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...) const;
     using remove_reference = R(Args...) const volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile;
 };
 
 template <typename R, typename... Args>
@@ -117,6 +132,9 @@ struct function_traits<R(Args...) const volatile &>
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) const &;
     using remove_reference = R(Args...) const volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile &;
 };
 
 template <typename R, typename... Args>
@@ -133,6 +151,9 @@ struct function_traits<R(Args...) const volatile &&>
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) const &&;
     using remove_reference = R(Args...) const volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile &&;
 };
 
 template <typename R, typename... Args>
@@ -149,6 +170,9 @@ struct function_traits<R(Args...) volatile>
     using remove_const = R(Args...) volatile;
     using remove_volatile = R(Args...);
     using remove_reference = R(Args...) volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile;
 };
 
 template <typename R, typename... Args>
@@ -165,6 +189,9 @@ struct function_traits<R(Args...) volatile &>
     using remove_const = R(Args...) volatile &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...) volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile &;
 };
 
 template <typename R, typename... Args>
@@ -181,6 +208,9 @@ struct function_traits<R(Args...) volatile &&>
     using remove_const = R(Args...) volatile &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...) volatile;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile &&;
 };
 
 template <typename R, typename... Args>
@@ -197,6 +227,9 @@ struct function_traits<R(Args...) &>
     using remove_const = R(Args...) &;
     using remove_volatile = R(Args...) &;
     using remove_reference = R(Args...);
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) &;
 };
 
 template <typename R, typename... Args>
@@ -213,6 +246,9 @@ struct function_traits<R(Args...) &&>
     using remove_const = R(Args...) &&;
     using remove_volatile = R(Args...) &&;
     using remove_reference = R(Args...);
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) &&;
 };
 
 #if __cpp_noexcept_function_type >= 201510L
@@ -231,6 +267,9 @@ struct function_traits<R(Args...) noexcept>
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) noexcept;
 };
 
 template <typename R, typename... Args>
@@ -247,6 +286,9 @@ struct function_traits<R(Args...) const noexcept>
     using remove_const = R(Args...) noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const noexcept;
 };
 
 template <typename R, typename... Args>
@@ -263,6 +305,9 @@ struct function_traits<R(Args...) const & noexcept>
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const & noexcept;
 };
 
 template <typename R, typename... Args>
@@ -279,6 +324,9 @@ struct function_traits<R(Args...) const && noexcept>
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const && noexcept;
 };
 
 template <typename R, typename... Args>
@@ -295,6 +343,9 @@ struct function_traits<R(Args...) const volatile noexcept>
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) const noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile noexcept;
 };
 
 template <typename R, typename... Args>
@@ -311,6 +362,9 @@ struct function_traits<R(Args...) const volatile & noexcept>
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) const & noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile & noexcept;
 };
 
 template <typename R, typename... Args>
@@ -327,6 +381,9 @@ struct function_traits<R(Args...) const volatile && noexcept>
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) const && noexcept;
     using remove_reference = R(Args...) const volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) const volatile && noexcept;
 };
 
 template <typename R, typename... Args>
@@ -343,6 +400,9 @@ struct function_traits<R(Args...) volatile noexcept>
     using remove_const = R(Args...) volatile noexcept;
     using remove_volatile = R(Args...) noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile noexcept;
 };
 
 template <typename R, typename... Args>
@@ -359,6 +419,9 @@ struct function_traits<R(Args...) volatile & noexcept>
     using remove_const = R(Args...) volatile & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile & noexcept;
 };
 
 template <typename R, typename... Args>
@@ -375,6 +438,9 @@ struct function_traits<R(Args...) volatile && noexcept>
     using remove_const = R(Args...) volatile && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) volatile noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) volatile && noexcept;
 };
 
 template <typename R, typename... Args>
@@ -391,6 +457,9 @@ struct function_traits<R(Args...) & noexcept>
     using remove_const = R(Args...) & noexcept;
     using remove_volatile = R(Args...) & noexcept;
     using remove_reference = R(Args...) noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) & noexcept;
 };
 
 template <typename R, typename... Args>
@@ -407,6 +476,9 @@ struct function_traits<R(Args...) && noexcept>
     using remove_const = R(Args...) && noexcept;
     using remove_volatile = R(Args...) && noexcept;
     using remove_reference = R(Args...) noexcept;
+
+    template <typename RR, typename... RArgs>
+    using rebind = RR(RArgs...) && noexcept;
 };
 
 #endif
