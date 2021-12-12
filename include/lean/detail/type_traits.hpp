@@ -20,7 +20,7 @@ namespace lean
 // Type-list
 
 template <typename...>
-struct proto;
+struct prototype;
 
 //-----------------------------------------------------------------------------
 // bool_constant [N4389]

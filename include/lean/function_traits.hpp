@@ -89,9 +89,6 @@ template <template <typename...> class Tuple, typename T>
 using function_arguments_t = typename function_arguments<Tuple, T>::type;
 
 //-----------------------------------------------------------------------------
-// function_size
-
-//-----------------------------------------------------------------------------
 // is_function_const
 
 template <typename T, typename = void>

@@ -72,7 +72,7 @@ template <typename, typename = void>
 struct is_invocable : std::false_type {};
 
 template <typename F, typename... Args>
-struct is_invocable<proto<F, Args...>,
+struct is_invocable<prototype<F, Args...>,
                     void_t<decltype(detail::call(std::declval<F>(), std::declval<Args>()...))>>
     : std::true_type
 {
@@ -82,7 +82,7 @@ struct is_invocable<proto<F, Args...>,
 
 template <typename F, typename... Args>
 struct is_invocable
-    : public detail::is_invocable<proto<F, Args...>>
+    : public detail::is_invocable<prototype<F, Args...>>
 {
 };
 
@@ -101,8 +101,8 @@ template <typename, typename = void>
 struct is_nothrow_invocable : std::false_type {};
 
 template <typename F, typename... Args>
-struct is_nothrow_invocable<proto<F, Args...>,
-                            enable_if_t<is_invocable<proto<F, Args...>>::value>>
+struct is_nothrow_invocable<prototype<F, Args...>,
+                            enable_if_t<is_invocable<prototype<F, Args...>>::value>>
     : std::integral_constant<bool,
                              noexcept(detail::call(std::declval<F>(), std::declval<Args>()...))>
 {
@@ -112,7 +112,7 @@ struct is_nothrow_invocable<proto<F, Args...>,
 
 template <typename F, typename... Args>
 struct is_nothrow_invocable
-    : public detail::is_nothrow_invocable<proto<F, Args...>>
+    : public detail::is_nothrow_invocable<prototype<F, Args...>>
 {
 };
 
@@ -128,8 +128,8 @@ template <typename, typename = void>
 struct invoke_result;
 
 template <typename F, typename... Args>
-struct invoke_result<proto<F, Args...>,
-                     enable_if_t<is_invocable<proto<F, Args...>>::value>>
+struct invoke_result<prototype<F, Args...>,
+                     enable_if_t<is_invocable<prototype<F, Args...>>::value>>
 {
     using type = decltype(detail::call(std::declval<F>(), std::declval<Args>()...));
 };
@@ -138,7 +138,7 @@ struct invoke_result<proto<F, Args...>,
 
 template <typename F, typename... Args>
 struct invoke_result
-    : detail::invoke_result<proto<F, Args...>>
+    : detail::invoke_result<prototype<F, Args...>>
 {
 };
 

@@ -27,7 +27,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...)>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
@@ -43,7 +43,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -59,7 +59,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const &>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -75,7 +75,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const &&>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -91,7 +91,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -107,7 +107,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -123,7 +123,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile &&>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -139,7 +139,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -155,7 +155,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -171,7 +171,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile &&>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -187,7 +187,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) &>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
@@ -203,7 +203,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) &&>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
@@ -221,7 +221,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
@@ -237,7 +237,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -253,7 +253,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const & noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -269,7 +269,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const && noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::false_type;
@@ -285,7 +285,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -301,7 +301,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile & noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -317,7 +317,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) const volatile && noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::true_type;
     using is_volatile = std::true_type;
@@ -333,7 +333,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -349,7 +349,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile & noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -365,7 +365,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) volatile && noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::true_type;
@@ -381,7 +381,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) & noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
@@ -397,7 +397,7 @@ template <typename R, typename... Args>
 struct function_traits<R(Args...) && noexcept>
 {
     using return_type = R;
-    using arguments = proto<Args...>;
+    using arguments = prototype<Args...>;
 
     using is_const = std::false_type;
     using is_volatile = std::false_type;
