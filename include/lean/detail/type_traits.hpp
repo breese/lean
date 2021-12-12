@@ -261,7 +261,7 @@ using copy_const_t = typename copy_const<Lhs, Rhs>::type;
 //-----------------------------------------------------------------------------
 // copy_volatile [P1450]
 //
-// Let Rhs be volatile if Rhs is volatile
+// Let Rhs be volatile if Lhs is volatile
 
 template <typename Lhs, typename Rhs>
 struct copy_volatile
