@@ -586,24 +586,6 @@ static_assert(lean::type_find_max<constant<3>, constant<1>, constant<2>>() == 0,
 
 //-----------------------------------------------------------------------------
 
-namespace proto_rebind_suite
-{
-
-template <typename...> struct test_tuple;
-
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<>>, test_tuple<>>{}, "");
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool>>, test_tuple<bool>>{}, "");
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool, int>>, test_tuple<bool, int>>{}, "");
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<>, lean::proto<bool, int, float>>, test_tuple<bool, int, float>>{}, "");
-
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool>, lean::proto<>>, test_tuple<>>{}, "");
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool, int>, lean::proto<>>, test_tuple<>>{}, "");
-static_assert(std::is_same<lean::proto_rebind_t<test_tuple<bool, int, float>, lean::proto<>>, test_tuple<>>{}, "");
-
-} // namespace proto_rebind_suite
-
-//-----------------------------------------------------------------------------
-
 namespace is_complete_suite
 {
 

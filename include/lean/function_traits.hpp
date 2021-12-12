@@ -13,6 +13,7 @@
 
 #include <lean/detail/function_traits.hpp>
 #include <lean/detail/type_traits.hpp>
+#include <lean/detail/template_traits.hpp>
 
 namespace lean
 {
@@ -81,11 +82,14 @@ struct function_arguments;
 template <template <typename...> class Tuple, typename T>
 struct function_arguments<Tuple, T, enable_if_t<std::is_function<T>::value>>
 {
-    using type = proto_rebind_t<Tuple<>, typename v1::detail::function_traits<T>::arguments>;
+    using type = template_rebind_t<typename v1::detail::function_traits<T>::arguments, Tuple>;
 };
 
 template <template <typename...> class Tuple, typename T>
 using function_arguments_t = typename function_arguments<Tuple, T>::type;
+
+//-----------------------------------------------------------------------------
+// function_size
 
 //-----------------------------------------------------------------------------
 // is_function_const
