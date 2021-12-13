@@ -1594,6 +1594,59 @@ static_assert(std::is_same<lean::remove_function_ellipsis_t<bool(...) && noexcep
 
 //-----------------------------------------------------------------------------
 
+namespace suite_remove_all_qualifiers
+{
+
+template <typename T>
+struct test_remove_qualifiers
+    : lean::function_rebind<void(),
+                            lean::function_return_t<T>,
+                            lean::function_arguments_t<lean::prototype, T>>
+{
+};
+
+template <typename T>
+using test_remove_qualifiers_t = typename test_remove_qualifiers<T>::type;
+
+static_assert(std::is_same<test_remove_qualifiers_t<bool()>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const &>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const &&>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile &>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile &&>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile &>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile &&>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() &>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() &&>, bool() >{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+static_assert(std::is_same<test_remove_qualifiers_t<bool() noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const & noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const && noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile & noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() const volatile && noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile & noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() volatile && noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() & noexcept>, bool()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<bool() && noexcept>, bool() >{}, "");
+
+#endif
+
+static_assert(std::is_same<test_remove_qualifiers_t<void() const volatile &>, void()>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<void(bool) const volatile &>, void(bool)>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<void(bool, int) const volatile &>, void(bool, int)>{}, "");
+static_assert(std::is_same<test_remove_qualifiers_t<void(bool, int, float) const volatile &>, void(bool, int, float)>{}, "");
+
+} // namespace suite_remove_all_qualifiers
+
+//-----------------------------------------------------------------------------
+
 int main()
 {
     (void)lambda_const;
