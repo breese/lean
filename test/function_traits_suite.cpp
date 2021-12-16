@@ -9,6 +9,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "test_assert.hpp"
+#include <lean/detail/config.hpp> // attributes
 #include <lean/function_traits.hpp>
 
 //-----------------------------------------------------------------------------
@@ -25,15 +26,39 @@ struct function_object_noexcept {
     void operator()() noexcept;
 };
 
-auto lambda_const = [] {};
-auto lambda_mutable = [] () mutable {};
-auto lambda_const_noexcept = [] () noexcept {};
-auto lambda_mutable_noexcept = [] () mutable noexcept {};
+struct overloaded_function_object {
+    void operator()();
+    void operator()() const;
+};
+
+struct overloaded_function_object_noexcept {
+    void operator()() noexcept;
+    void operator()() const noexcept;
+};
+
+struct overloaded_return_function_object {
+    bool operator()(bool);
+    int operator()(int);
+};
+
+struct templated_function_object {
+    template <typename... Args>
+    void invoke(Args&&...);
+    template <typename... Args>
+    void operator()(Args&&...);
+};
 
 //-----------------------------------------------------------------------------
 
 namespace suite_function_type
 {
+
+template <typename F, typename... Args>
+constexpr auto test_invoker(F&&, Args&&...)
+    -> lean::add_pointer_t<lean::prototype<lean::function_type_t<F, Args...>>>
+{
+    return nullptr;
+}
 
 // Function type
 
@@ -213,24 +238,125 @@ static_assert(std::is_same<lean::function_type_t<bool (cls::*volatile &&)()>, bo
 static_assert(std::is_same<lean::function_type_t<bool (cls::*&)()>, bool()>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (cls::*&&)()>, bool()>{}, "");
 
+// Function
+
+constexpr void function(bool);
+
+static_assert(std::is_same<decltype(test_invoker(function)), lean::prototype<void(bool)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(&function)), lean::prototype<void(bool)>*>{}, "");
+
+constexpr bool overloaded_function(bool);
+constexpr int overloaded_function(int);
+
+// Overloaded function must be disambiguated manually
+static_assert(std::is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function))), lean::prototype<bool(bool)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<bool>())), lean::prototype<bool(bool)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<int>())), lean::prototype<bool(bool)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function))), lean::prototype<int(int)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function), std::declval<int*>())), lean::prototype<int(int)>*>{}, "argument ignored");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+constexpr void function_noexcept(bool) noexcept;
+
+static_assert(std::is_same<decltype(test_invoker(function_noexcept)), lean::prototype<void(bool) noexcept>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(&function_noexcept)), lean::prototype<void(bool) noexcept>*>{}, "");
+
+#endif
+
 // Function object
 
 static_assert(std::is_same<lean::function_type_t<function_object>, void()>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object::operator())>, void()>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object::invoke)>, void()>{}, "");
-static_assert(std::is_same<lean::function_type_t<decltype(lambda_const)>, void() const>{}, "");
-static_assert(std::is_same<lean::function_type_t<decltype(lambda_mutable)>, void()>{}, "");
+
+static_assert(std::is_same<lean::function_type_t<overloaded_function_object>, void() const>{}, "prefer const");
+static_assert(std::is_same<lean::function_type_t<const overloaded_function_object>, void() const>{}, "");
+
+static_assert(std::is_same<lean::function_type_t<bool(overloaded_return_function_object::*)(bool)>, bool(bool)>{}, "");
+static_assert(std::is_same<lean::function_type_t<overloaded_return_function_object, bool>, bool(bool)>{}, "");
+
+static_assert(std::is_same<lean::function_type_t<templated_function_object>, void()>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object, bool&&>, void(bool&&)>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object, bool&&, int&&>, void(bool&&, int&&)>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(&templated_function_object::operator()<bool>), bool>, void(bool&&)>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(&templated_function_object::invoke<bool>), bool>, void(bool&&)>{}, "");
 
 #if __cpp_noexcept_function_type >= 201510L
 
 static_assert(std::is_same<lean::function_type_t<function_object_noexcept>, void() noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object_noexcept::operator())>, void() noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object_noexcept::invoke)>, void() noexcept>{}, "");
+
+static_assert(std::is_same<lean::function_type_t<overloaded_function_object_noexcept>, void() const noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const overloaded_function_object_noexcept>, void() const noexcept>{}, "");
+
+#endif
+
+// Lamdba
+
+LEAN_ATTRIBUTE_UNUSED auto lambda_const = [] {};
+LEAN_ATTRIBUTE_UNUSED auto lambda_mutable = [] () mutable {};
+
+static_assert(std::is_same<lean::function_type_t<decltype(lambda_const)>, void() const>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(lambda_mutable)>, void()>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+LEAN_ATTRIBUTE_UNUSED auto lambda_const_noexcept = [] () noexcept {};
+LEAN_ATTRIBUTE_UNUSED auto lambda_mutable_noexcept = [] () mutable noexcept {};
+
 static_assert(std::is_same<lean::function_type_t<decltype(lambda_const_noexcept)>, void() const noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(lambda_mutable_noexcept)>, void() noexcept>{}, "");
 
 #endif
 
+// Generic lambda
+
+#if __cpp_generic_lambdas >= 201304L
+
+LEAN_ATTRIBUTE_UNUSED auto generic_lambda_const = [] (auto...) {};
+LEAN_ATTRIBUTE_UNUSED auto generic_lambda_mutable = [] (auto...) mutable {};
+
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable)>, void()>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable), bool>, void(bool)>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable), bool, int>, void(bool, int)>{}, "");
+
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable)), lean::prototype<void()>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable, std::declval<bool>())), lean::prototype<void(bool)>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable, std::declval<bool>(), std::declval<int>())), lean::prototype<void(bool, int)>*>{}, "");
+
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const)>, void() const>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const), bool>, void(bool) const>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const), bool, int>, void(bool, int) const>{}, "");
+
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const)), lean::prototype<void() const>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const, std::declval<bool>())), lean::prototype<void(bool) const>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const, std::declval<bool>(), std::declval<int>())), lean::prototype<void(bool, int) const>*>{}, "");
+
+
+#if __cpp_noexcept_function_type >= 201510L
+
+LEAN_ATTRIBUTE_UNUSED auto generic_lambda_const_noexcept = [] (auto...) noexcept {};
+LEAN_ATTRIBUTE_UNUSED auto generic_lambda_mutable_noexcept = [] (auto...) mutable noexcept {};
+
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable_noexcept)>, void() noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable_noexcept), bool>, void(bool) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_mutable_noexcept), bool, int>, void(bool, int) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const_noexcept)>, void() const noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const_noexcept), bool>, void(bool) const noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const_noexcept), bool, int>, void(bool, int) const noexcept>{}, "");
+
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable_noexcept)), lean::prototype<void() noexcept>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable_noexcept, std::declval<bool>())), lean::prototype<void(bool) noexcept>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_mutable_noexcept, std::declval<bool>(), std::declval<int>())), lean::prototype<void(bool, int) noexcept>*>{}, "");
+
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const_noexcept)), lean::prototype<void() const noexcept>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const_noexcept, std::declval<bool>())), lean::prototype<void(bool) const noexcept>*>{}, "");
+static_assert(std::is_same<decltype(test_invoker(generic_lambda_const_noexcept, std::declval<bool>(), std::declval<int>())), lean::prototype<void(bool, int) const noexcept>*>{}, "");
+
+#endif
+#endif
 
 } // namespace suite_function_type
 
@@ -1649,9 +1775,5 @@ static_assert(std::is_same<test_remove_qualifiers_t<void(bool, int, float) const
 
 int main()
 {
-    (void)lambda_const;
-    (void)lambda_mutable;
-    (void)lambda_const_noexcept;
-    (void)lambda_mutable_noexcept;
     return 0;
 }

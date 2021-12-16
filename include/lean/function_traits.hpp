@@ -23,41 +23,141 @@ namespace lean
 
 namespace impl {
 
-template <typename T, typename = void>
+template <typename T, typename, typename = void>
 struct function_type;
 
-template <typename T>
-struct function_type<T, enable_if_t<std::is_function<T>::value>> {
+template <typename T, typename A>
+struct function_type<T, A, enable_if_t<std::is_function<T>::value>>
+{
     using type = T;
 };
 
 // Function pointer
 
-template <typename T>
-struct function_type<T *> : function_type<T> {};
+template <typename T, typename A>
+struct function_type<T *, A> : function_type<T, A> {};
 
 // Member function pointer
 
-template <typename T, typename C>
-struct function_type<T C::*> {
+template <typename T, typename C, typename A>
+struct function_type<T C::*, A>
+{
     using type = T;
 };
 
 // Function object
+//
+// Disambiguates call operators that are overloaded or template functions.
+//
+// Prefers const-qualified overloads.
 
-template <typename T>
-struct function_type<T, void_t<decltype(&T::operator())>>
-        : function_type<decltype(&T::operator())> {};
+template <typename, typename, typename, typename = void>
+struct function_object_mutable;
+
+template <typename T, typename R, typename... Args>
+struct function_object_mutable<T,
+                               R,
+                               prototype<Args...>,
+                               void_t<decltype(static_cast<R(T::*)(Args...)>(&T::operator()))>>
+{
+    using type = typename function_type<decltype(static_cast<R(T::*)(Args...)>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename A, typename = void>
+struct function_object_const
+    : function_object_mutable<T, R, A>
+{
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_const<T,
+                             R,
+                             prototype<Args...>,
+                             void_t<decltype(static_cast<R(T::*)(Args...) const>(&T::operator()))>>
+{
+    using type = typename function_type<decltype(static_cast<R(T::*)(Args...) const>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+#if __cpp_noexcept_function_type >= 201510L
+
+template <typename T, typename R, typename A, typename = void>
+struct function_object_mutable_noexcept
+    : function_object_const<T, R, A>
+{
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_mutable_noexcept<T,
+                                        R,
+                                        prototype<Args...>,
+                                        void_t<decltype(static_cast<R(T::*)(Args...) noexcept>(&T::operator()))>>
+{
+private:
+    using overloaded_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                          decltype(static_cast<R(T::*)(Args...) noexcept>(&T::operator())),
+                                          decltype(static_cast<R(T::*)(Args...)>(&T::operator()))>;
+public:
+    using type = typename function_type<overloaded_type, prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename A, typename = void>
+struct function_object_const_noexcept
+    : function_object_mutable_noexcept<T, R, A>
+{
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_const_noexcept<T,
+                                      R,
+                                      prototype<Args...>,
+                                      void_t<decltype(static_cast<R(T::*)(Args...) const noexcept>(&T::operator()))>>
+{
+private:
+    using overloaded_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                          decltype(static_cast<R(T::*)(Args...) const noexcept>(&T::operator())),
+                                          decltype(static_cast<R(T::*)(Args...) const>(&T::operator()))>;
+public:
+    using type = typename function_type<overloaded_type, prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename A>
+struct function_object_type
+    : function_object_const_noexcept<T, R, A>
+{
+};
+
+#else
+
+template <typename T, typename R, typename A>
+struct function_object_type
+    : function_object_const<T, R, A>
+{
+};
+
+#endif
+
+template <typename T, typename... Args>
+struct function_type<T,
+                     prototype<Args...>,
+                     void_t<decltype(std::declval<T>().operator()(std::declval<Args>()...))>>
+    : function_object_type<T,
+                           decltype(std::declval<T>().operator()(std::declval<Args>()...)),
+                           prototype<Args...>>
+{
+};
 
 } // namespace impl
 
-template <typename T>
-struct function_type {
-    using type = typename impl::function_type<remove_cvref_t<T>>::type;
+template <typename T, typename... Args>
+struct function_type
+    : impl::function_type<remove_cvref_t<T>, prototype<Args...>>
+{
 };
 
-template <typename T>
-using function_type_t = typename function_type<T>::type;
+template <typename T, typename... Args>
+using function_type_t = typename function_type<T, Args...>::type;
 
 //-----------------------------------------------------------------------------
 // function_return
