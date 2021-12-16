@@ -50,6 +50,16 @@
 
 // Attributes
 
+#if defined(__has_cpp_attribute)
+
+#if __has_cpp_attribute(maybe_unused)
+# define LEAN_ATTRIBUTE_UNUSED [[maybe_unused]]
+#else
+# define LEAN_ATTRIBUTE_UNUSED [[gnu::unused]]
+#endif
+
+#endif // __has_cpp_attributes
+
 #define LEAN_ATTRIBUTE_NOINLINE [[gnu::noinline]]
 
 #endif // LEAN_DETAIL_CONFIG_HPP
