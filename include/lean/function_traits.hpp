@@ -23,128 +23,434 @@ namespace lean
 
 namespace impl {
 
-template <typename T, typename, typename = void>
-struct function_type;
+// Function object
+//
+// Argument types disambiguates overloaded or template call operators.
 
-template <typename T, typename A>
-struct function_type<T, A, enable_if_t<std::is_function<T>::value>>
+template <typename, typename, typename = void>
+struct function_type_invocable;
+
+template <typename T, typename, typename A, typename = void>
+struct function_type
+    : function_type_invocable<T, A>
 {
-    using type = T;
 };
+
+template <typename T, typename DecayT, typename A>
+struct function_type<T,
+                     DecayT,
+                     A,
+                     enable_if_t<std::is_function<DecayT>::value>>
+{
+    using type = DecayT;
+};
+
 
 // Function pointer
 
-template <typename T, typename A>
-struct function_type<T *, A> : function_type<T, A> {};
+template <typename T, typename DecayT, typename A>
+struct function_type<T, DecayT*, A>
+    : function_type<T, DecayT, A>
+{
+};
 
 // Member function pointer
 
-template <typename T, typename C, typename A>
-struct function_type<T C::*, A>
+template <typename T, typename DecayT, typename C, typename A>
+struct function_type<T, DecayT C::*, A>
 {
-    using type = T;
+    using type = DecayT;
 };
 
 // Function object
-//
-// Disambiguates call operators that are overloaded or template functions.
-//
-// Prefers const-qualified overloads.
 
 template <typename, typename, typename, typename = void>
-struct function_object_mutable;
+struct function_type_operator_near;
 
 template <typename T, typename R, typename... Args>
-struct function_object_mutable<T,
-                               R,
-                               prototype<Args...>,
-                               void_t<decltype(static_cast<R(T::*)(Args...)>(&T::operator()))>>
+struct function_type_operator_near<T,
+                                   R,
+                                   prototype<Args...>,
+                                   void_t<decltype(static_cast<R (T::*)(Args...) const>(&T::operator()))>>
 {
-    using type = typename function_type<decltype(static_cast<R(T::*)(Args...)>(&T::operator())),
+    using type = typename function_type<T,
+                                        decltype(static_cast<R (T::*)(Args...) const>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_near<T&,
+                                   R,
+                                   prototype<Args...>,
+                                   void_t<decltype(static_cast<R (T::*)(Args...) &>(&T::operator()))>>
+{
+    using type = typename function_type<T&,
+                                        decltype(static_cast<R (T::*)(Args...) &>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_near<T&&,
+                                   R,
+                                   prototype<Args...>,
+                                   void_t<decltype(static_cast<R (T::*)(Args...) &&>(&T::operator()))>>
+{
+    using type = typename function_type<T&&,
+                                        decltype(static_cast<R (T::*)(Args...) &&>(&T::operator())),
                                         prototype<Args...>>::type;
 };
 
 template <typename T, typename R, typename A, typename = void>
-struct function_object_const
-    : function_object_mutable<T, R, A>
+struct function_type_operator_noexcept_near
+    : function_type_operator_near<T, R, A>
 {
-};
-
-template <typename T, typename R, typename... Args>
-struct function_object_const<T,
-                             R,
-                             prototype<Args...>,
-                             void_t<decltype(static_cast<R(T::*)(Args...) const>(&T::operator()))>>
-{
-    using type = typename function_type<decltype(static_cast<R(T::*)(Args...) const>(&T::operator())),
-                                        prototype<Args...>>::type;
 };
 
 #if __cpp_noexcept_function_type >= 201510L
 
-template <typename T, typename R, typename A, typename = void>
-struct function_object_mutable_noexcept
-    : function_object_const<T, R, A>
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept_near<T,
+                                            R,
+                                            prototype<Args...>,
+                                            void_t<decltype(static_cast<R (T::*)(Args...) const noexcept>(&T::operator()))>>
 {
+    using callable_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const>(&T::operator()))>;
+    using type = typename function_type<T,
+                                        callable_type,
+                                        prototype<Args...>>::type;
 };
 
 template <typename T, typename R, typename... Args>
-struct function_object_mutable_noexcept<T,
-                                        R,
-                                        prototype<Args...>,
-                                        void_t<decltype(static_cast<R(T::*)(Args...) noexcept>(&T::operator()))>>
+struct function_type_operator_noexcept_near<T&,
+                                            R,
+                                            prototype<Args...>,
+                                            void_t<decltype(static_cast<R (T::*)(Args...) & noexcept>(&T::operator()))>>
 {
-private:
-    using overloaded_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
-                                          decltype(static_cast<R(T::*)(Args...) noexcept>(&T::operator())),
-                                          decltype(static_cast<R(T::*)(Args...)>(&T::operator()))>;
-public:
-    using type = typename function_type<overloaded_type, prototype<Args...>>::type;
-};
-
-template <typename T, typename R, typename A, typename = void>
-struct function_object_const_noexcept
-    : function_object_mutable_noexcept<T, R, A>
-{
+    using callable_type = conditional_t<noexcept(std::declval<T&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) & noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) &>(&T::operator()))>;
+    using type = typename function_type<T&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
 };
 
 template <typename T, typename R, typename... Args>
-struct function_object_const_noexcept<T,
-                                      R,
-                                      prototype<Args...>,
-                                      void_t<decltype(static_cast<R(T::*)(Args...) const noexcept>(&T::operator()))>>
+struct function_type_operator_noexcept_near<T&&,
+                                            R,
+                                            prototype<Args...>,
+                                            void_t<decltype(static_cast<R (T::*)(Args...) && noexcept>(&T::operator()))>>
 {
-private:
-    using overloaded_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
-                                          decltype(static_cast<R(T::*)(Args...) const noexcept>(&T::operator())),
-                                          decltype(static_cast<R(T::*)(Args...) const>(&T::operator()))>;
-public:
-    using type = typename function_type<overloaded_type, prototype<Args...>>::type;
+    using callable_type = conditional_t<noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) && noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) &&>(&T::operator()))>;
+    using type = typename function_type<T&&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
 };
 
-template <typename T, typename R, typename A>
-struct function_object_type
-    : function_object_const_noexcept<T, R, A>
+#endif
+
+template <typename T, typename R, typename A, typename = void>
+struct function_type_operator
+    : function_type_operator_noexcept_near<T, R, A>
 {
 };
 
-#else
+// Exact match.
+//
+// Uses "is_same<T, cv-qual remove_cv_t<T>>" to avoid greedy matching, where
+// "const T" matches both "const A" and "const volatile A" leading to ambiguous
+// template matching.
 
-template <typename T, typename R, typename A>
-struct function_object_type
-    : function_object_const<T, R, A>
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...)>(&T::operator()))>>
 {
+    using type = typename function_type<T,
+                                        decltype(static_cast<R (T::*)(Args...)>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const>(&T::operator()))>>
+{
+    using type = typename function_type<T,
+                                        decltype(static_cast<R (T::*)(Args...) const>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const &>(&T::operator()))>>
+{
+    using type = typename function_type<T&,
+                                        decltype(static_cast<R (T::*)(Args...) const &>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const &&>(&T::operator()))>>
+{
+    using type = typename function_type<T&&,
+                                        decltype(static_cast<R (T::*)(Args...) const &&>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile>(&T::operator()))>>
+{
+    using type = typename function_type<T,
+                                        decltype(static_cast<R (T::*)(Args...) const volatile>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile &>(&T::operator()))>>
+{
+    using type = typename function_type<T&,
+                                        decltype(static_cast<R (T::*)(Args...) const volatile &>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile &&>(&T::operator()))>>
+{
+    using type = typename function_type<T&&,
+                                        decltype(static_cast<R (T::*)(Args...) const volatile &&>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) volatile>(&T::operator()))>>
+{
+    using type = typename function_type<T,
+                                        decltype(static_cast<R (T::*)(Args...) volatile>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) volatile &>(&T::operator()))>>
+{
+    using type = typename function_type<T&,
+                                        decltype(static_cast<R (T::*)(Args...) volatile &>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) volatile &&>(&T::operator()))>>
+{
+    using type = typename function_type<T&&,
+                                        decltype(static_cast<R (T::*)(Args...) volatile &&>(&T::operator())),
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename A, typename = void>
+struct function_type_operator_noexcept
+    : function_type_operator<T, R, A>
+{
+};
+
+#if __cpp_noexcept_function_type >= 201510L
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...)>(&T::operator()))>;
+    using type = typename function_type<T,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const>(&T::operator()))>;
+    using type = typename function_type<T,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const & noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const & noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const &>(&T::operator()))>;
+    using type = typename function_type<T&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const && noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const && noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const &&>(&T::operator()))>;
+    using type = typename function_type<T&&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) volatile noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) volatile noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) volatile>(&T::operator()))>;
+    using type = typename function_type<T,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) volatile & noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) volatile & noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) volatile &>(&T::operator()))>;
+    using type = typename function_type<T&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) volatile && noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) volatile && noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) volatile &&>(&T::operator()))>;
+    using type = typename function_type<T&&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const volatile noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile>(&T::operator()))>;
+    using type = typename function_type<T,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const volatile & noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile & noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile &>(&T::operator()))>;
+    using type = typename function_type<T&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_type_operator_noexcept<T&&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<std::is_same<T, const volatile remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) const volatile && noexcept>(&T::operator()))>>
+{
+    using callable_type = conditional_t<noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile && noexcept>(&T::operator())),
+                                        decltype(static_cast<R (T::*)(Args...) const volatile &&>(&T::operator()))>;
+    using type = typename function_type<T&&,
+                                        callable_type,
+                                        prototype<Args...>>::type;
 };
 
 #endif
 
 template <typename T, typename... Args>
-struct function_type<T,
-                     prototype<Args...>,
-                     void_t<decltype(std::declval<T>().operator()(std::declval<Args>()...))>>
-    : function_object_type<T,
-                           decltype(std::declval<T>().operator()(std::declval<Args>()...)),
-                           prototype<Args...>>
+struct function_type_invocable<T,
+                               prototype<Args...>,
+                               void_t<decltype(std::declval<T>().operator()(std::declval<Args>()...))>>
+    : function_type_operator_noexcept<T,
+                                      decltype(std::declval<T>().operator()(std::declval<Args>()...)),
+                                      prototype<Args...>>
 {
 };
 
@@ -152,7 +458,7 @@ struct function_type<T,
 
 template <typename T, typename... Args>
 struct function_type
-    : impl::function_type<remove_cvref_t<T>, prototype<Args...>>
+    : impl::function_type<T, remove_cvref_t<T>, prototype<Args...>>
 {
 };
 

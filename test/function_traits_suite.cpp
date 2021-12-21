@@ -26,35 +26,13 @@ struct function_object_noexcept {
     void operator()() noexcept;
 };
 
-struct overloaded_function_object {
-    void operator()();
-    void operator()() const;
-};
-
-struct overloaded_function_object_noexcept {
-    void operator()() noexcept;
-    void operator()() const noexcept;
-};
-
-struct overloaded_return_function_object {
-    bool operator()(bool);
-    int operator()(int);
-};
-
-struct templated_function_object {
-    template <typename... Args>
-    void invoke(Args&&...);
-    template <typename... Args>
-    void operator()(Args&&...);
-};
-
 //-----------------------------------------------------------------------------
 
 namespace suite_function_type
 {
 
 template <typename F, typename... Args>
-constexpr auto test_invoker(F&&, Args&&...)
+constexpr auto test_invoker(F, Args...)
     -> lean::add_pointer_t<lean::prototype<lean::function_type_t<F, Args...>>>
 {
     return nullptr;
@@ -270,17 +248,171 @@ static_assert(std::is_same<lean::function_type_t<function_object>, void()>{}, ""
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object::operator())>, void()>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object::invoke)>, void()>{}, "");
 
-static_assert(std::is_same<lean::function_type_t<overloaded_function_object>, void() const>{}, "prefer const");
-static_assert(std::is_same<lean::function_type_t<const overloaded_function_object>, void() const>{}, "");
+struct function_object_mutable
+{
+    void operator()();
+};
 
-static_assert(std::is_same<lean::function_type_t<bool(overloaded_return_function_object::*)(bool)>, bool(bool)>{}, "");
-static_assert(std::is_same<lean::function_type_t<overloaded_return_function_object, bool>, bool(bool)>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_mutable>, void()>{}, "");
+
+struct function_object_const
+{
+    void operator()() const;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const>, void() const>{}, "");
+
+struct function_object_const_lvalue
+{
+    void operator()() const &;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const_lvalue&>, void() const &>{}, "");
+
+struct function_object_const_rvalue
+{
+    void operator()() const &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const_rvalue&&>, void() const &&>{}, "");
+
+struct function_object_const_volatile
+{
+    void operator()() const volatile;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile>, void() const volatile>{}, "");
+
+struct function_object_const_volatile_lvalue
+{
+    void operator()() const volatile &;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile_lvalue&>, void() const volatile &>{}, "");
+
+struct function_object_const_volatile_rvalue
+{
+    void operator()() const volatile &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile_rvalue&&>, void() const volatile &&>{}, "");
+
+struct function_object_volatile
+{
+    void operator()() volatile;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile>, void() volatile>{}, "");
+
+struct function_object_volatile_lvalue
+{
+    void operator()() volatile &;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile_lvalue&>, void() volatile &>{}, "");
+
+struct function_object_volatile_rvalue
+{
+    void operator()() volatile &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile_rvalue&&>, void() volatile &&>{}, "");
+
+struct function_object_lvalue
+{
+    void operator()() &;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_lvalue&>, void() &>{}, "");
+
+struct function_object_rvalue
+{
+    void operator()() &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_rvalue&&>, void() &&>{}, "");
+
+struct function_object_overload_1
+{
+    void operator()();
+    void operator()() const;
+    void operator()() const volatile;
+    void operator()() volatile;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_overload_1>, void()>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_overload_1>, void() const>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_overload_1>, void() const volatile>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_overload_1>, void() volatile>{}, "");
+
+struct function_object_overload_2
+{
+    void operator()() &;
+    void operator()() const &;
+    void operator()() const volatile &;
+    void operator()() volatile &;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_overload_2&>, void() &>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_overload_2&>, void() const &>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_overload_2&>, void() const volatile &>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_overload_2&>, void() volatile &>{}, "");
+
+struct function_object_overload_3
+{
+    void operator()() &&;
+    void operator()() const &&;
+    void operator()() const volatile &&;
+    void operator()() volatile &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_overload_3&&>, void() &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_overload_3&&>, void() const &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_overload_3&&>, void() const volatile &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_overload_3&&>, void() volatile &&>{}, "");
+
+struct function_object_overload_4
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_overload_4&>, void() &>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_overload_4&&>, void() &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_overload_4&>, void() const &>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_overload_4&&>, void() const &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_overload_4&>, void() const volatile &>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_overload_4&&>, void() const volatile &&>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_overload_4&>, void() volatile &>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_overload_4&&>, void() volatile &&>{}, "");
+
+struct function_object_overload_arg
+{
+    void operator()(bool);
+    void operator()(bool, int);
+    void operator()(int);
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_overload_arg, bool>, void(bool)>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_overload_arg, bool, int>, void(bool, int)>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_overload_arg, int>, void(int)>{}, "");
+
+struct templated_function_object
+{
+    template <typename... Args>
+    void operator()(Args...);
+};
 
 static_assert(std::is_same<lean::function_type_t<templated_function_object>, void()>{}, "");
-static_assert(std::is_same<lean::function_type_t<templated_function_object, bool&&>, void(bool&&)>{}, "");
-static_assert(std::is_same<lean::function_type_t<templated_function_object, bool&&, int&&>, void(bool&&, int&&)>{}, "");
-static_assert(std::is_same<lean::function_type_t<decltype(&templated_function_object::operator()<bool>), bool>, void(bool&&)>{}, "");
-static_assert(std::is_same<lean::function_type_t<decltype(&templated_function_object::invoke<bool>), bool>, void(bool&&)>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object, bool>, void(bool)>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object, bool, int>, void(bool, int)>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object, bool, int, float>, void(bool, int, float)>{}, "");
 
 #if __cpp_noexcept_function_type >= 201510L
 
@@ -288,8 +420,171 @@ static_assert(std::is_same<lean::function_type_t<function_object_noexcept>, void
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object_noexcept::operator())>, void() noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<decltype(&function_object_noexcept::invoke)>, void() noexcept>{}, "");
 
-static_assert(std::is_same<lean::function_type_t<overloaded_function_object_noexcept>, void() const noexcept>{}, "");
-static_assert(std::is_same<lean::function_type_t<const overloaded_function_object_noexcept>, void() const noexcept>{}, "");
+struct function_object_mutable_noexcept
+{
+    void operator()() noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_mutable_noexcept>, void() noexcept>{}, "");
+
+struct function_object_const_noexcept
+{
+    void operator()() const noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const_noexcept>, void() const noexcept>{}, "");
+
+struct function_object_const_lvalue_noexcept
+{
+    void operator()() const & noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const_lvalue_noexcept&>, void() const & noexcept>{}, "");
+
+struct function_object_const_rvalue_noexcept
+{
+    void operator()() const && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const function_object_const_rvalue_noexcept&&>, void() const && noexcept>{}, "");
+
+struct function_object_const_volatile_noexcept
+{
+    void operator()() const volatile noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile_noexcept>, void() const volatile noexcept>{}, "");
+
+struct function_object_const_volatile_lvalue_noexcept
+{
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile_lvalue_noexcept&>, void() const volatile & noexcept>{}, "");
+
+struct function_object_const_volatile_rvalue_noexcept
+{
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_const_volatile_rvalue_noexcept&&>, void() const volatile && noexcept>{}, "");
+
+struct function_object_volatile_noexcept
+{
+    void operator()() volatile noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile_noexcept>, void() volatile noexcept>{}, "");
+
+struct function_object_volatile_lvalue_noexcept
+{
+    void operator()() volatile & noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile_lvalue_noexcept&>, void() volatile & noexcept>{}, "");
+
+struct function_object_volatile_rvalue_noexcept
+{
+    void operator()() volatile && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<volatile function_object_volatile_rvalue_noexcept&&>, void() volatile && noexcept>{}, "");
+
+struct function_object_lvalue_noexcept
+{
+    void operator()() & noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_lvalue_noexcept&>, void() & noexcept>{}, "");
+
+struct function_object_rvalue_noexcept
+{
+    void operator()() && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_rvalue_noexcept&&>, void() && noexcept>{}, "");
+
+struct function_object_noexcept_overload_1
+{
+    void operator()() noexcept;
+    void operator()() const noexcept;
+    void operator()() const volatile noexcept;
+    void operator()() volatile noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_1>, void() noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_noexcept_overload_1>, void() const noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_noexcept_overload_1>, void() const volatile noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_noexcept_overload_1>, void() volatile noexcept>{}, "");
+
+struct function_object_noexcept_overload_2
+{
+    void operator()() & noexcept;
+    void operator()() const & noexcept;
+    void operator()() const volatile & noexcept;
+    void operator()() volatile & noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_2&>, void() & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_noexcept_overload_2&>, void() const & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_noexcept_overload_2&>, void() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_noexcept_overload_2&>, void() volatile & noexcept>{}, "");
+
+struct function_object_noexcept_overload_3
+{
+    void operator()() && noexcept;
+    void operator()() const && noexcept;
+    void operator()() const volatile && noexcept;
+    void operator()() volatile && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_3&&>, void() && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_noexcept_overload_3&&>, void() const && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_noexcept_overload_3&&>, void() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_noexcept_overload_3&&>, void() volatile && noexcept>{}, "");
+
+struct function_object_noexcept_overload_4
+{
+    void operator()() & noexcept;
+    void operator()() && noexcept;
+    void operator()() const & noexcept;
+    void operator()() const && noexcept;
+    void operator()() const volatile & noexcept;
+    void operator()() const volatile && noexcept;
+    void operator()() volatile & noexcept;
+    void operator()() volatile && noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_4&>, void() & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_4&&>, void() && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_noexcept_overload_4&>, void() const & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const function_object_noexcept_overload_4&&>, void() const && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_noexcept_overload_4&>, void() const volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<const volatile function_object_noexcept_overload_4&&>, void() const volatile && noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_noexcept_overload_4&>, void() volatile & noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<volatile function_object_noexcept_overload_4&&>, void() volatile && noexcept>{}, "");
+
+struct function_object_noexcept_overload_arg
+{
+    void operator()(bool) noexcept;
+    void operator()(bool, int) noexcept;
+    void operator()(int) noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_arg, bool>, void(bool) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_arg, bool, int>, void(bool, int) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<function_object_noexcept_overload_arg, int>, void(int) noexcept>{}, "");
+
+struct templated_function_object_noexcept
+{
+    template <typename... Args>
+    void operator()(Args...) noexcept;
+};
+
+static_assert(std::is_same<lean::function_type_t<templated_function_object_noexcept>, void() noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object_noexcept, bool>, void(bool) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object_noexcept, bool, int>, void(bool, int) noexcept>{}, "");
+static_assert(std::is_same<lean::function_type_t<templated_function_object_noexcept, bool, int, float>, void(bool, int, float) noexcept>{}, "");
 
 #endif
 
@@ -333,7 +628,6 @@ static_assert(std::is_same<lean::function_type_t<decltype(generic_lambda_const),
 static_assert(std::is_same<decltype(test_invoker(generic_lambda_const)), lean::prototype<void() const>*>{}, "");
 static_assert(std::is_same<decltype(test_invoker(generic_lambda_const, std::declval<bool>())), lean::prototype<void(bool) const>*>{}, "");
 static_assert(std::is_same<decltype(test_invoker(generic_lambda_const, std::declval<bool>(), std::declval<int>())), lean::prototype<void(bool, int) const>*>{}, "");
-
 
 #if __cpp_noexcept_function_type >= 201510L
 
