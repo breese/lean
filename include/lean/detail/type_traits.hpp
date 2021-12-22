@@ -49,6 +49,7 @@ using std::add_volatile;
 using std::conditional;
 using std::decay;
 using std::enable_if;
+using std::is_function;
 using std::is_same;
 using std::remove_const;
 using std::remove_cv;
@@ -433,7 +434,7 @@ template <std::size_t N, std::size_t M, template <typename, typename> class F, t
 struct type_fold_left<N, M, F, Lhs, Rhs>
 {
     using type = typename F<Lhs, Rhs>::type;
-    static constexpr std::size_t value = std::is_same<type, Lhs>::value ? N : M;
+    static constexpr std::size_t value = is_same<type, Lhs>::value ? N : M;
     constexpr operator std::size_t() const noexcept { return value; }
 };
 

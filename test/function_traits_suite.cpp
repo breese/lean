@@ -99,28 +99,20 @@ static_assert(std::is_same<lean::function_type_t<bool(...) && noexcept>, bool(..
 // Function pointer and reference
 
 static_assert(std::is_same<lean::function_type_t<bool (*)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (**)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (***)()>, bool()>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&)()>, bool()>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&&)()>, bool()>{}, "");
 
 static_assert(std::is_same<lean::function_type_t<bool (*)(...)>, bool(...)>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (**)(...)>, bool(...)>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (***)(...)>, bool(...)>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&)(...)>, bool(...)>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&&)(...)>, bool(...)>{}, "");
 
 #if __cpp_noexcept_function_type >= 201510L
 
 static_assert(std::is_same<lean::function_type_t<bool (*)() noexcept>, bool() noexcept>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (**)() noexcept>, bool() noexcept>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (***)() noexcept>, bool() noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&)() noexcept>, bool() noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&&)() noexcept>, bool() noexcept>{}, "");
 
 static_assert(std::is_same<lean::function_type_t<bool (*)(...) noexcept>, bool(...) noexcept>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (**)(...) noexcept>, bool(...) noexcept>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (***)(...) noexcept>, bool(...) noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&)(...) noexcept>, bool(...) noexcept>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (&&)(...) noexcept>, bool(...) noexcept>{}, "");
 
@@ -129,16 +121,8 @@ static_assert(std::is_same<lean::function_type_t<bool (&&)(...) noexcept>, bool(
 // Function pointer qualifiers
 
 static_assert(std::is_same<lean::function_type_t<bool (* const)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* const &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* const &&)()>, bool()>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (* const volatile)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* const volatile &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* const volatile &&)()>, bool()>{}, "");
 static_assert(std::is_same<lean::function_type_t<bool (* volatile)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* volatile &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* volatile &&)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (* &&)()>, bool()>{}, "");
 
 // Member function pointer
 
@@ -204,17 +188,9 @@ static_assert(std::is_same<lean::function_type_t<bool (cls::*)(...) && noexcept>
 
 // Member function pointer qualifiers
 
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const &&)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const volatile)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const volatile &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*const volatile &&)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*volatile)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*volatile &)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*volatile &&)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*&)()>, bool()>{}, "");
-static_assert(std::is_same<lean::function_type_t<bool (cls::*&&)()>, bool()>{}, "");
+static_assert(std::is_same<lean::function_type_t<bool (cls::* const)()>, bool()>{}, "");
+static_assert(std::is_same<lean::function_type_t<bool (cls::* const volatile)()>, bool()>{}, "");
+static_assert(std::is_same<lean::function_type_t<bool (cls::* volatile)()>, bool()>{}, "");
 
 // Function
 
@@ -334,6 +310,7 @@ static_assert(std::is_same<lean::function_type_t<function_object_rvalue&&>, void
 
 struct function_object_overload_1
 {
+    // No reference qualifiers
     void operator()();
     void operator()() const;
     void operator()() const volatile;
@@ -347,6 +324,7 @@ static_assert(std::is_same<lean::function_type_t<volatile function_object_overlo
 
 struct function_object_overload_2
 {
+    // Lvalue-reference qualifiers
     void operator()() &;
     void operator()() const &;
     void operator()() const volatile &;
@@ -360,6 +338,7 @@ static_assert(std::is_same<lean::function_type_t<volatile function_object_overlo
 
 struct function_object_overload_3
 {
+    // Rvalue-reference qualifiers
     void operator()() &&;
     void operator()() const &&;
     void operator()() const volatile &&;
@@ -373,6 +352,7 @@ static_assert(std::is_same<lean::function_type_t<volatile function_object_overlo
 
 struct function_object_overload_4
 {
+    // Reference qualifiers
     void operator()() &;
     void operator()() &&;
     void operator()() const &;
