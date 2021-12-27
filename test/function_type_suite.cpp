@@ -10,12 +10,47 @@
 
 #include <lean/detail/config.hpp> // attributes
 #include <lean/function_traits.hpp>
+#include <lean/type_traits.hpp>
 
 using namespace lean;
 
 //-----------------------------------------------------------------------------
 
+namespace lean
+{
+namespace impl
+{
+
+template <typename, typename, typename = void>
+struct is_function_type : std::false_type
+{
+};
+
+template <typename T, typename... Args>
+struct is_function_type<T,
+                        prototype<Args...>,
+                        void_t<function_type_t<T, Args...>>>
+    : std::true_type
+{
+};
+
+} // namespace impl
+
+template <typename T, typename... Args>
+struct is_function_type : impl::is_function_type<T, prototype<Args...>>
+{
+};
+
+} // namespace lean
+
+//-----------------------------------------------------------------------------
+
 class cls;
+
+struct return_mutable {};
+struct return_const {};
+struct return_volatile {};
+struct return_const_volatile {};
 
 struct function_object {
     void invoke();
@@ -38,8 +73,6 @@ constexpr auto test_invoker(F, Args...)
 
 namespace suite_function_type
 {
-
-// Function type
 
 static_assert(is_same<function_type_t<bool()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool() const>, bool() const>{}, "");
@@ -97,6 +130,13 @@ static_assert(is_same<function_type_t<bool(...) && noexcept>, bool(...) && noexc
 
 #endif
 
+} // suite_function_type
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function
+{
+
 // Function pointer and reference
 
 static_assert(is_same<function_type_t<bool (*)()>, bool()>{}, "");
@@ -125,7 +165,36 @@ static_assert(is_same<function_type_t<bool (* const)()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool (* const volatile)()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool (* volatile)()>, bool()>{}, "");
 
-// Member function pointer
+constexpr void function(bool);
+
+static_assert(is_same<decltype(test_invoker(function)), prototype<void(bool)>*>{}, "");
+static_assert(is_same<decltype(test_invoker(&function)), prototype<void(bool)>*>{}, "");
+
+constexpr bool overloaded_function(bool);
+constexpr int overloaded_function(int);
+
+// Overloaded function must be disambiguated manually
+static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function))), prototype<bool(bool)>*>{}, "");
+static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<bool>())), prototype<bool(bool)>*>{}, "");
+static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<int>())), prototype<bool(bool)>*>{}, "");
+static_assert(is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function))), prototype<int(int)>*>{}, "");
+static_assert(is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function), std::declval<int*>())), prototype<int(int)>*>{}, "argument ignored");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+constexpr void function_noexcept(bool) noexcept;
+
+static_assert(is_same<decltype(test_invoker(function_noexcept)), prototype<void(bool) noexcept>*>{}, "");
+static_assert(is_same<decltype(test_invoker(&function_noexcept)), prototype<void(bool) noexcept>*>{}, "");
+
+#endif
+
+} // namespace suite_function
+
+//-----------------------------------------------------------------------------
+
+namespace suite_member_function
+{
 
 static_assert(is_same<function_type_t<bool (cls::*)()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool (cls::*)() const>, bool() const>{}, "");
@@ -193,33 +262,12 @@ static_assert(is_same<function_type_t<bool (cls::* const)()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool (cls::* const volatile)()>, bool()>{}, "");
 static_assert(is_same<function_type_t<bool (cls::* volatile)()>, bool()>{}, "");
 
-// Function
+} // namespace suite_member_function
 
-constexpr void function(bool);
+//-----------------------------------------------------------------------------
 
-static_assert(is_same<decltype(test_invoker(function)), prototype<void(bool)>*>{}, "");
-static_assert(is_same<decltype(test_invoker(&function)), prototype<void(bool)>*>{}, "");
-
-constexpr bool overloaded_function(bool);
-constexpr int overloaded_function(int);
-
-// Overloaded function must be disambiguated manually
-static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function))), prototype<bool(bool)>*>{}, "");
-static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<bool>())), prototype<bool(bool)>*>{}, "");
-static_assert(is_same<decltype(test_invoker(static_cast<bool(&)(bool)>(overloaded_function), std::declval<int>())), prototype<bool(bool)>*>{}, "");
-static_assert(is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function))), prototype<int(int)>*>{}, "");
-static_assert(is_same<decltype(test_invoker(static_cast<int(&)(int)>(overloaded_function), std::declval<int*>())), prototype<int(int)>*>{}, "argument ignored");
-
-#if __cpp_noexcept_function_type >= 201510L
-
-constexpr void function_noexcept(bool) noexcept;
-
-static_assert(is_same<decltype(test_invoker(function_noexcept)), prototype<void(bool) noexcept>*>{}, "");
-static_assert(is_same<decltype(test_invoker(&function_noexcept)), prototype<void(bool) noexcept>*>{}, "");
-
-#endif
-
-// Function object
+namespace suite_function_object
+{
 
 static_assert(is_same<function_type_t<function_object>, void()>{}, "");
 static_assert(is_same<function_type_t<decltype(&function_object::operator())>, void()>{}, "");
@@ -287,14 +335,18 @@ struct function_object_rvalue
 
 static_assert(is_same<function_type_t<function_object_mutable>, void()>{}, "");
 static_assert(is_same<function_type_t<const function_object_const>, void() const>{}, "");
+static_assert(is_same<function_type_t<const function_object_const_lvalue>, void() const &>{}, "");
 static_assert(is_same<function_type_t<const function_object_const_lvalue&>, void() const &>{}, "");
 static_assert(is_same<function_type_t<const function_object_const_rvalue&&>, void() const &&>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_const_volatile>, void() const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_const_volatile_lvalue>, void() const volatile &>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_const_volatile_lvalue&>, void() const volatile &>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_const_volatile_rvalue&&>, void() const volatile &&>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_volatile>, void() volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_volatile_lvalue>, void() volatile &>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_volatile_lvalue&>, void() volatile &>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_volatile_rvalue&&>, void() volatile &&>{}, "");
+static_assert(is_same<function_type_t<function_object_lvalue>, void() &>{}, "");
 static_assert(is_same<function_type_t<function_object_lvalue&>, void() &>{}, "");
 static_assert(is_same<function_type_t<function_object_rvalue&&>, void() &&>{}, "");
 
@@ -360,16 +412,27 @@ struct function_object_ellipsis_rvalue
 
 static_assert(is_same<function_type_t<function_object_ellipsis_mutable>, void(...)>{}, "");
 static_assert(is_same<function_type_t<const function_object_ellipsis_const>, void(...) const>{}, "");
+static_assert(is_same<function_type_t<const function_object_ellipsis_const_lvalue>, void(...) const &>{}, "");
 static_assert(is_same<function_type_t<const function_object_ellipsis_const_lvalue&>, void(...) const &>{}, "");
 static_assert(is_same<function_type_t<const function_object_ellipsis_const_rvalue&&>, void(...) const &&>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_ellipsis_const_volatile>, void(...) const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_ellipsis_const_volatile_lvalue>, void(...) const volatile &>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_ellipsis_const_volatile_lvalue&>, void(...) const volatile &>{}, "");
 static_assert(is_same<function_type_t<const volatile function_object_ellipsis_const_volatile_rvalue&&>, void(...) const volatile &&>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_ellipsis_volatile>, void(...) volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_ellipsis_volatile_lvalue>, void(...) volatile &>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_ellipsis_volatile_lvalue&>, void(...) volatile &>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_ellipsis_volatile_rvalue&&>, void(...) volatile &&>{}, "");
+static_assert(is_same<function_type_t<function_object_ellipsis_lvalue>, void(...) &>{}, "");
 static_assert(is_same<function_type_t<function_object_ellipsis_lvalue&>, void(...) &>{}, "");
 static_assert(is_same<function_type_t<function_object_ellipsis_rvalue&&>, void(...) &&>{}, "");
+
+} // namespace suite_function_object
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_qual
+{
 
 struct function_object_overload_1
 {
@@ -498,28 +561,6 @@ static_assert(is_same<function_type_t<const volatile function_object_ellipsis_ov
 static_assert(is_same<function_type_t<const volatile function_object_ellipsis_overload_4&&>, void(...) const volatile &&>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_ellipsis_overload_4&>, void(...) volatile &>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_ellipsis_overload_4&&>, void(...) volatile &&>{}, "");
-
-struct function_object_overload_arg
-{
-    void operator()(bool);
-    void operator()(bool, int);
-    void operator()(int);
-};
-
-static_assert(is_same<function_type_t<function_object_overload_arg, bool>, void(bool)>{}, "");
-static_assert(is_same<function_type_t<function_object_overload_arg, bool, int>, void(bool, int)>{}, "");
-static_assert(is_same<function_type_t<function_object_overload_arg, int>, void(int)>{}, "");
-
-struct templated_function_object
-{
-    template <typename... Args>
-    void operator()(Args...);
-};
-
-static_assert(is_same<function_type_t<templated_function_object>, void()>{}, "");
-static_assert(is_same<function_type_t<templated_function_object, bool>, void(bool)>{}, "");
-static_assert(is_same<function_type_t<templated_function_object, bool, int>, void(bool, int)>{}, "");
-static_assert(is_same<function_type_t<templated_function_object, bool, int, float>, void(bool, int, float)>{}, "");
 
 #if __cpp_noexcept_function_type >= 201510L
 
@@ -733,6 +774,799 @@ static_assert(is_same<function_type_t<const volatile function_object_noexcept_ov
 static_assert(is_same<function_type_t<volatile function_object_noexcept_overload_4&>, void() volatile & noexcept>{}, "");
 static_assert(is_same<function_type_t<volatile function_object_noexcept_overload_4&&>, void() volatile && noexcept>{}, "");
 
+#endif
+
+} // namespace suite_function_object_qual
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_near_cvqual
+{
+
+// Cannot disambiguate all cases as there is no partial ordering between const
+// and volatile [basic.type.qualifier]/5
+
+struct function_object_overload_near_0001
+{
+    // return_mutable operator()();
+    return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert(!is_invocable<function_object_overload_near_0001>{}, "");
+static_assert( is_invocable<const function_object_overload_near_0001>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_0001>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0001>{}, "");
+
+static_assert(!is_function_type<function_object_overload_near_0001>{}, "");
+static_assert( is_function_type<const function_object_overload_near_0001>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_0001>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0001>{}, "");
+
+static_assert(is_same<invoke_result_t<const function_object_overload_near_0001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_0001>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0001>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<const function_object_overload_near_0001>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_0001>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0001>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0010
+{
+    return_mutable operator()();
+    // return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_0010>{}, "");
+static_assert( is_invocable<const function_object_overload_near_0010>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_0010>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0010>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_0010>{}, "");
+static_assert( is_function_type<const function_object_overload_near_0010>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_0010>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0010>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_0010>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_0010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_0010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0010>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_0010>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_0010>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_0010>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0010>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0011
+{
+    // return_mutable operator()();
+    // return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_0011>{}, "");
+static_assert( is_invocable<const function_object_overload_near_0011>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_0011>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0011>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_0011>{}, "");
+static_assert( is_function_type<const function_object_overload_near_0011>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_0011>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0011>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_0011>, return_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_0011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_0011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0011>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_0011>, return_volatile() volatile>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_0011>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_0011>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0011>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0100
+{
+    return_mutable operator()();
+    return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_0100>{}, "");
+static_assert( is_invocable<const function_object_overload_near_0100>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_0100>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0100>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_0100>{}, "");
+static_assert( is_function_type<const function_object_overload_near_0100>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_0100>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_0100>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_0100>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0100>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_0100>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_0100>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0100>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0101
+{
+    // return_mutable operator()();
+    return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert(!is_invocable<function_object_overload_near_0101>{}, "");
+static_assert( is_invocable<const function_object_overload_near_0101>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_0101>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0101>{}, "");
+
+static_assert(!is_function_type<function_object_overload_near_0101>{}, "");
+static_assert( is_function_type<const function_object_overload_near_0101>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_0101>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0101>{}, "");
+
+static_assert(is_same<invoke_result_t<const function_object_overload_near_0101>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0101>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<const function_object_overload_near_0101>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0101>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0110
+{
+    return_mutable operator()();
+    // return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_0110>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_0110>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_0110>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0110>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_0110>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_0110>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_0110>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0110>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_0110>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0110>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_0110>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0110>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_0111
+{
+    // return_mutable operator()();
+    // return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_0111>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_0111>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_0111>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_0111>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_0111>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_0111>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_0111>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_0111>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_0111>, return_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0111>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_0111>, return_volatile() volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_0111>, return_volatile() volatile>{}, "");
+
+struct function_object_overload_near_1000
+{
+    return_mutable operator()();
+    return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1000>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1000>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_1000>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_1000>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1000>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1000>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_1000>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_1000>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1000>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1000>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1000>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1000>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1000>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1000>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
+
+struct function_object_overload_near_1001
+{
+    // return_mutable operator()();
+    return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1001>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1001>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_1001>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_1001>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1001>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1001>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_1001>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_1001>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1001>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1001>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1001>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1001>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_1001>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_1001>, return_const_volatile() const volatile>{}, "");
+
+struct function_object_overload_near_1010
+{
+    return_mutable operator()();
+    // return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1010>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1010>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_1010>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_1010>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1010>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1010>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_1010>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_1010>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1010>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1010>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1010>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1010>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_1010>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_1010>, return_const_volatile() const volatile>{}, "");
+
+struct function_object_overload_near_1011
+{
+    // return_mutable operator()();
+    // return_const operator()() const;
+    return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1011>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1011>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_1011>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_1011>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1011>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1011>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_1011>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_1011>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1011>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
+
+struct function_object_overload_near_1100
+{
+    return_mutable operator()();
+    return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1100>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1100>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_1100>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_1100>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1100>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1100>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_1100>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_1100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1100>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1100>, return_const>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1100>, return_mutable()>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1100>, return_const() const>{}, "");
+
+struct function_object_overload_near_1101
+{
+    // return_mutable operator()();
+    return_const operator()() const;
+    // return_const_volatile operator()() const volatile;
+    // return_volatile operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1101>{}, "");
+static_assert( is_invocable<const function_object_overload_near_1101>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_1101>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_1101>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1101>{}, "");
+static_assert( is_function_type<const function_object_overload_near_1101>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_1101>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_1101>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1101>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_1101>, return_const>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1101>, return_const() const>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_1101>, return_const() const>{}, "");
+
+struct function_object_overload_near_1110
+{
+    return_mutable operator()();
+    // return_const operator()() const;
+    // return_const_mutable operator()() const volatile;
+    // return_mutable operator()() volatile;
+};
+
+static_assert( is_invocable<function_object_overload_near_1110>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_1110>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_1110>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_1110>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_1110>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_1110>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_1100>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_1100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_1110>, return_mutable>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_1110>, return_mutable()>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
+struct function_object_overload_near_noexcept_0001
+{
+    // return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert(!is_invocable<function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0001>{}, "");
+
+static_assert(!is_function_type<function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_0001>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0001>{}, "");
+
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_0001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_0001>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0001>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_0001>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_0001>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0001>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0010
+{
+    return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0010>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_0010>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0010>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_0010>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_0010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_0010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0010>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_0010>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_0010>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_0010>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0010>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0011
+{
+    // return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0011>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_0011>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0011>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_0011>, return_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_0011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_0011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0011>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_0011>, return_volatile() volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_0011>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_0011>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0011>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0100
+{
+    return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_0100>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_0100>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_0100>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0100>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_0100>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_0100>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_0100>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_0100>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_0100>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0100>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_0100>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_0100>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0100>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0101
+{
+    // return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert(!is_invocable<function_object_overload_near_noexcept_0101>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_0101>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_0101>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0101>{}, "");
+
+static_assert(!is_function_type<function_object_overload_near_noexcept_0101>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_0101>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_0101>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0101>{}, "");
+
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_0101>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0101>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_0101>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0101>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0110
+{
+    return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_0110>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_noexcept_0110>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_0110>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0110>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_0110>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_noexcept_0110>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_0110>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0110>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_0110>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0110>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_0110>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0110>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_0111
+{
+    // return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_0111>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_noexcept_0111>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_0111>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_0111>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_0111>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_noexcept_0111>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_0111>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_0111>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_0111>, return_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_0111>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_0111>, return_volatile() volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_0111>, return_volatile() volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1000
+{
+    return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_1000>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_1000>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_1000>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1000>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1000>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_1000>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_1000>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1000>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1000>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_1000>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_1000>, return_const_volatile() const volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1001
+{
+    // return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_1001>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_1001>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_1001>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1001>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_1001>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_1001>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1001>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1001>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_1001>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_1001>, return_const_volatile() const volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1010
+{
+    return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_1010>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_1010>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_1010>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1010>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_1010>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_1010>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1010>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1010>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_1010>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_1010>, return_const_volatile() const volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1011
+{
+    // return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_invocable<volatile function_object_overload_near_noexcept_1011>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_near_noexcept_1011>{}, "");
+static_assert( is_function_type<volatile function_object_overload_near_noexcept_1011>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_1011>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_1011>, return_const_volatile>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1011>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1011>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_1011>, return_const_volatile() const volatile noexcept>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_1011>, return_const_volatile() const volatile noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1100
+{
+    return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1100>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1100>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_1100>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_noexcept_1100>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1100>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1100>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_1100>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_noexcept_1100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1100>, return_mutable>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1100>, return_const>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1100>, return_mutable() noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1100>, return_const() const noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1101
+{
+    // return_mutable operator()() noexcept;
+    return_const operator()() const noexcept;
+    // return_const_volatile operator()() const volatile noexcept;
+    // return_volatile operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1101>{}, "");
+static_assert( is_invocable<const function_object_overload_near_noexcept_1101>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_1101>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_noexcept_1101>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1101>{}, "");
+static_assert( is_function_type<const function_object_overload_near_noexcept_1101>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_1101>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_noexcept_1101>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1101>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_1101>, return_const>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1101>, return_const() const noexcept>{}, "");
+static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_1101>, return_const() const noexcept>{}, "");
+
+struct function_object_overload_near_noexcept_1110
+{
+    return_mutable operator()() noexcept;
+    // return_const operator()() const noexcept;
+    // return_const_mutable operator()() const volatile noexcept;
+    // return_mutable operator()() volatile noexcept;
+};
+
+static_assert( is_invocable<function_object_overload_near_noexcept_1110>{}, "");
+static_assert(!is_invocable<const function_object_overload_near_noexcept_1110>{}, "");
+static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_1110>{}, "");
+static_assert(!is_invocable<volatile function_object_overload_near_noexcept_1110>{}, "");
+
+static_assert( is_function_type<function_object_overload_near_noexcept_1110>{}, "");
+static_assert(!is_function_type<const function_object_overload_near_noexcept_1110>{}, "");
+static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_1100>{}, "");
+static_assert(!is_function_type<volatile function_object_overload_near_noexcept_1100>{}, "");
+
+static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_1110>, return_mutable>{}, "");
+
+static_assert(is_same<function_type_t<function_object_overload_near_noexcept_1110>, return_mutable() noexcept>{}, "");
+
+#endif
+
+} // namespace suite_function_object_near_cvqual
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_near_cvqual_lvalue
+{
+
+struct function_object_overload_lnear_0001
+{
+    // return_mutable operator()() &;
+    return_const operator()() const &;
+    return_const_volatile operator()() const volatile &;
+    return_volatile operator()() volatile &;
+};
+
+static_assert(!is_invocable<function_object_overload_lnear_0001&>{}, "");
+static_assert( is_invocable<const function_object_overload_lnear_0001&>{}, "");
+static_assert( is_invocable<const volatile function_object_overload_lnear_0001&>{}, "");
+static_assert( is_invocable<volatile function_object_overload_lnear_0001&>{}, "");
+
+static_assert(!is_function_type<function_object_overload_lnear_0001&>{}, "");
+static_assert( is_function_type<const function_object_overload_lnear_0001&>{}, "");
+static_assert( is_function_type<const volatile function_object_overload_lnear_0001&>{}, "");
+static_assert( is_function_type<volatile function_object_overload_lnear_0001&>{}, "");
+
+static_assert(is_same<invoke_result_t<const function_object_overload_lnear_0001&>, return_const>{}, "");
+static_assert(is_same<invoke_result_t<const volatile function_object_overload_lnear_0001&>, return_const_volatile>{}, "");
+static_assert(is_same<invoke_result_t<volatile function_object_overload_lnear_0001&>, return_volatile>{}, "");
+
+static_assert(is_same<function_type_t<const function_object_overload_lnear_0001&>, return_const() const &>{}, "");
+static_assert(is_same<function_type_t<const volatile function_object_overload_lnear_0001&>, return_const_volatile() const volatile &>{}, "");
+static_assert(is_same<function_type_t<volatile function_object_overload_lnear_0001&>, return_volatile() volatile &>{}, "");
+
+} // namespace suite_function_object_near_cvqual_lvalue
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_argument
+{
+
+struct function_object_overload_arg
+{
+    void operator()(bool);
+    void operator()(bool, int);
+    void operator()(int);
+};
+
+static_assert(is_same<function_type_t<function_object_overload_arg, bool>, void(bool)>{}, "");
+static_assert(is_same<function_type_t<function_object_overload_arg, bool, int>, void(bool, int)>{}, "");
+static_assert(is_same<function_type_t<function_object_overload_arg, int>, void(int)>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
+
 struct function_object_noexcept_overload_arg
 {
     void operator()(bool) noexcept;
@@ -743,6 +1577,28 @@ struct function_object_noexcept_overload_arg
 static_assert(is_same<function_type_t<function_object_noexcept_overload_arg, bool>, void(bool) noexcept>{}, "");
 static_assert(is_same<function_type_t<function_object_noexcept_overload_arg, bool, int>, void(bool, int) noexcept>{}, "");
 static_assert(is_same<function_type_t<function_object_noexcept_overload_arg, int>, void(int) noexcept>{}, "");
+
+#endif
+
+} // namespace suite_function_object_argument
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_template
+{
+
+struct templated_function_object
+{
+    template <typename... Args>
+    void operator()(Args...);
+};
+
+static_assert(is_same<function_type_t<templated_function_object>, void()>{}, "");
+static_assert(is_same<function_type_t<templated_function_object, bool>, void(bool)>{}, "");
+static_assert(is_same<function_type_t<templated_function_object, bool, int>, void(bool, int)>{}, "");
+static_assert(is_same<function_type_t<templated_function_object, bool, int, float>, void(bool, int, float)>{}, "");
+
+#if __cpp_noexcept_function_type >= 201510L
 
 struct templated_function_object_noexcept
 {
@@ -757,7 +1613,12 @@ static_assert(is_same<function_type_t<templated_function_object_noexcept, bool, 
 
 #endif
 
-// Lamdba
+} // namespace suite_function_object_template
+
+//-----------------------------------------------------------------------------
+
+namespace suite_lambda
+{
 
 LEAN_ATTRIBUTE_UNUSED auto lambda_const = [] {};
 LEAN_ATTRIBUTE_UNUSED auto lambda_mutable = [] () mutable {};
@@ -821,7 +1682,7 @@ static_assert(is_same<decltype(test_invoker(generic_lambda_const_noexcept, std::
 #endif
 #endif
 
-} // namespace suite_function_type
+} // namespace suite_lambda
 
 //-----------------------------------------------------------------------------
 

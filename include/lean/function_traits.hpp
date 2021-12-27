@@ -24,7 +24,7 @@ namespace lean
 
 template <typename T, typename... Args>
 struct function_type
-    : detail::v1::function_type<T, prototype<Args...>>
+    : v1::detail::function_type<T, prototype<Args...>>
 {
 };
 

@@ -11,15 +11,16 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <lean/detail/function_traits.hpp>
 #include <lean/detail/type_traits.hpp>
 
 namespace lean
 {
-namespace detail
-{
 namespace v1
 {
+namespace detail
+{
+
+//-----------------------------------------------------------------------------
 
 template <typename, typename = void>
 struct function_type_basis;
@@ -65,145 +66,62 @@ struct function_type_basis<T C::*, enable_if_t<is_function<T>::value>>
     using type = T;
 };
 
+//-----------------------------------------------------------------------------
 // Function object
 //
 // Argument types disambiguates overloaded or template call operators.
 
-template <typename, typename, typename, typename = void>
-struct function_type_operator_near;
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args...) const>(&T::operator()))>>
+template <typename T, typename R, typename A, typename = void>
+struct function_object_type_r
 {
-    using type = R(Args...) const;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args..., ...) const>(&T::operator()))>>
-{
-    using type = R(Args..., ...) const;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T&,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args...) &>(&T::operator()))>>
-{
-    using type = R(Args...) &;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T&,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args..., ...) &>(&T::operator()))>>
-{
-    using type = R(Args..., ...) &;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T&&,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args...) &&>(&T::operator()))>>
-{
-    using type = R(Args...) &&;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_near<T&&,
-                                   R,
-                                   prototype<Args...>,
-                                   void_t<decltype(static_cast<R (T::*)(Args..., ...) &&>(&T::operator()))>>
-{
-    using type = R(Args..., ...) &&;
 };
 
 template <typename T, typename R, typename A, typename = void>
-struct function_type_operator_noexcept_near
-    : function_type_operator_near<T, R, A>
+struct function_object_type_noexcept_r
+    : function_object_type_r<T, R, A>
 {
 };
 
-#if __cpp_noexcept_function_type >= 201510L
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args...) const noexcept>(&T::operator()))>>
-{
-    using type = R (Args...) const noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args..., ...) const noexcept>(&T::operator()))>>
-{
-    using type = R (Args..., ...) const noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T&,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args...) & noexcept>(&T::operator()))>>
-{
-    using type = R (Args...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T&,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args..., ...) & noexcept>(&T::operator()))>>
-{
-    using type = R (Args..., ...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T&&,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args...) && noexcept>(&T::operator()))>>
-{
-    using type = R (Args...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept_near<T&&,
-                                            R,
-                                            prototype<Args...>,
-                                            void_t<decltype(static_cast<R (T::*)(Args..., ...) && noexcept>(&T::operator()))>>
-{
-    using type = R (Args..., ...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
-};
-
-#endif
-
-template <typename T, typename R, typename A, typename = void>
-struct function_type_operator
-    : function_type_operator_noexcept_near<T, R, A>
+template <typename T, typename A, typename = void>
+struct function_object_type_lvalue
 {
 };
 
-// Exact match.
-//
+template <typename T, typename A, typename = void>
+struct function_object_type
+    : function_object_type_lvalue<T, A>
+{
+};
+
+template <typename T, typename... Args>
+struct function_object_type_lvalue<T,
+                                   prototype<Args...>,
+                                   void_t<enable_if_t<!std::is_reference<T>::value>,
+                                          decltype(std::declval<T&>()(std::declval<Args>()...))>>
+    : function_object_type_noexcept_r<T&,
+                                      decltype(std::declval<T&>()(std::declval<Args>()...)),
+                                      prototype<Args...>>
+{
+};
+
+template <typename T, typename... Args>
+struct function_object_type<T,
+                            prototype<Args...>,
+                            void_t<typename function_object_type_noexcept_r<T,
+                                                                            decltype(std::declval<T>()(std::declval<Args>()...)),
+                                                                            prototype<Args...>>::type>>
+    : function_object_type_noexcept_r<T,
+                                      decltype(std::declval<T>()(std::declval<Args>()...)),
+                                      prototype<Args...>>
+{
+};
+
 // Uses "is_same<T, cv-qual remove_cv_t<T>>" to avoid greedy matching, where
 // "const T" matches both "const A" and "const volatile A" leading to ambiguous
 // template matching.
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
@@ -213,7 +131,7 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
@@ -223,7 +141,49 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) &>(&T::operator()))>>
+{
+    using type = R(Args...) &;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args..., ...) &>(&T::operator()))>>
+{
+    using type = R(Args..., ...) &;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) &&>(&T::operator()))>>
+{
+    using type = R(Args...) &&;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args..., ...) &&>(&T::operator()))>>
+{
+    using type = R(Args..., ...) &&;
+};
+
+// const
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -233,7 +193,7 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -243,7 +203,7 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
+struct function_object_type_r<T&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -253,7 +213,7 @@ struct function_type_operator<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
+struct function_object_type_r<T&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -263,7 +223,7 @@ struct function_type_operator<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
+struct function_object_type_r<T&&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -273,7 +233,7 @@ struct function_type_operator<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
+struct function_object_type_r<T&&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -282,68 +242,10 @@ struct function_type_operator<T&&,
     using type = R (Args..., ...) const &&;
 };
 
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args...) const volatile>(&T::operator()))>>
-{
-    using type = R (Args...) const volatile;
-};
+// volatile
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile>(&T::operator()))>>
-{
-    using type = R (Args..., ...) const volatile;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args...) const volatile &>(&T::operator()))>>
-{
-    using type = R (Args...) const volatile &;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile &>(&T::operator()))>>
-{
-    using type = R (Args..., ...) const volatile &;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args...) const volatile &&>(&T::operator()))>>
-{
-    using type = R (Args...) const volatile &&;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
-                              R,
-                              prototype<Args...>,
-                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
-                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile &&>(&T::operator()))>>
-{
-    using type = R (Args..., ...) const volatile &&;
-};
-
-template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -353,7 +255,7 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T,
+struct function_object_type_r<T,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -363,7 +265,7 @@ struct function_type_operator<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
+struct function_object_type_r<T&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -373,7 +275,7 @@ struct function_type_operator<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&,
+struct function_object_type_r<T&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -383,7 +285,7 @@ struct function_type_operator<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
+struct function_object_type_r<T&&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -393,7 +295,7 @@ struct function_type_operator<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator<T&&,
+struct function_object_type_r<T&&,
                               R,
                               prototype<Args...>,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -402,16 +304,72 @@ struct function_type_operator<T&&,
     using type = R (Args..., ...) volatile &&;
 };
 
-template <typename T, typename R, typename A, typename = void>
-struct function_type_operator_noexcept
-    : function_type_operator<T, R, A>
+// const volatile
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile>(&T::operator()))>>
 {
+    using type = R (Args...) const volatile;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile>(&T::operator()))>>
+{
+    using type = R (Args..., ...) const volatile;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile &>(&T::operator()))>>
+{
+    using type = R (Args...) const volatile &;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile &>(&T::operator()))>>
+{
+    using type = R (Args..., ...) const volatile &;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args...) const volatile &&>(&T::operator()))>>
+{
+    using type = R (Args...) const volatile &&;
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_r<T&&,
+                              R,
+                              prototype<Args...>,
+                              void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
+                                     decltype(static_cast<R (T::*)(Args..., ...) const volatile &&>(&T::operator()))>>
+{
+    using type = R (Args..., ...) const volatile &&;
 };
 
 #if __cpp_noexcept_function_type >= 201510L
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
@@ -421,7 +379,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
@@ -431,7 +389,47 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) & noexcept>(&T::operator()))>>
+{
+    using type = R (Args...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_noexcept_r<T&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args..., ...) & noexcept>(&T::operator()))>>
+{
+    using type = R (Args..., ...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_noexcept_r<T&&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args...) && noexcept>(&T::operator()))>>
+{
+    using type = R (Args...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_noexcept_r<T&&,
+                                       R,
+                                       prototype<Args...>,
+                                       void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
+                                              decltype(static_cast<R (T::*)(Args..., ...) && noexcept>(&T::operator()))>>
+{
+    using type = R (Args..., ...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+};
+
+template <typename T, typename R, typename... Args>
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -441,7 +439,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -451,7 +449,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -461,7 +459,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -471,7 +469,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -481,7 +479,7 @@ struct function_type_operator_noexcept<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
@@ -491,7 +489,7 @@ struct function_type_operator_noexcept<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -501,7 +499,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -511,7 +509,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -521,7 +519,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -531,7 +529,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -541,7 +539,7 @@ struct function_type_operator_noexcept<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
@@ -551,7 +549,7 @@ struct function_type_operator_noexcept<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -561,7 +559,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T,
+struct function_object_type_noexcept_r<T,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -571,7 +569,7 @@ struct function_type_operator_noexcept<T,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -581,7 +579,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&,
+struct function_object_type_noexcept_r<T&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -591,7 +589,7 @@ struct function_type_operator_noexcept<T&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -601,7 +599,7 @@ struct function_type_operator_noexcept<T&&,
 };
 
 template <typename T, typename R, typename... Args>
-struct function_type_operator_noexcept<T&&,
+struct function_object_type_noexcept_r<T&&,
                                        R,
                                        prototype<Args...>,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
@@ -611,6 +609,385 @@ struct function_type_operator_noexcept<T&&,
 };
 
 #endif
+
+// Resolves cv-qualified overloaded call operators
+
+template <typename T, typename F1, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<const T, F1, F2, F3, F4>
+{
+    using type = F2;
+};
+
+template <typename T, typename F1, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<volatile T, F1, F2, F3, F4>
+{
+    using type = F3;
+};
+
+template <typename T, typename F1, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<const volatile T, F1, F2, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<T, void, F2, F3, F4>
+{
+};
+
+template <typename T, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<const T, void, F2, F3, F4>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<volatile T, void, F2, F3, F4>
+{
+    using type = F3;
+};
+
+template <typename T, typename F2, typename F3, typename F4>
+struct function_object_select_cvqual<const volatile T, void, F2, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F3, typename F4>
+struct function_object_select_cvqual<T, F1, void, F3, F4>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F3, typename F4>
+struct function_object_select_cvqual<const T, F1, void, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F3, typename F4>
+struct function_object_select_cvqual<volatile T, F1, void, F3, F4>
+{
+    using type = F3;
+};
+
+template <typename T, typename F1, typename F3, typename F4>
+struct function_object_select_cvqual<const volatile T, F1, void, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F3, typename F4>
+struct function_object_select_cvqual<T, void, void, F3, F4>
+{
+    using type = F3;
+};
+
+template <typename T, typename F3, typename F4>
+struct function_object_select_cvqual<const T, void, void, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F3, typename F4>
+struct function_object_select_cvqual<volatile T, void, void, F3, F4>
+{
+    using type = F3;
+};
+
+template <typename T, typename F3, typename F4>
+struct function_object_select_cvqual<const volatile T, void, void, F3, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F2, typename F4>
+struct function_object_select_cvqual<T, F1, F2, void, F4>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F2, typename F4>
+struct function_object_select_cvqual<const T, F1, F2, void, F4>
+{
+    using type = F2;
+};
+
+template <typename T, typename F1, typename F2, typename F4>
+struct function_object_select_cvqual<volatile T, F1, F2, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F2, typename F4>
+struct function_object_select_cvqual<const volatile T, F1, F2, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F2, typename F4>
+struct function_object_select_cvqual<T, void, F2, void, F4>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2, typename F4>
+struct function_object_select_cvqual<const T, void, F2, void, F4>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2, typename F4>
+struct function_object_select_cvqual<volatile T, void, F2, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F2, typename F4>
+struct function_object_select_cvqual<const volatile T, void, F2, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F4>
+struct function_object_select_cvqual<T, F1, void, void, F4>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F4>
+struct function_object_select_cvqual<const T, F1, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F4>
+struct function_object_select_cvqual<volatile T, F1, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F4>
+struct function_object_select_cvqual<const volatile T, F1, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F4>
+struct function_object_select_cvqual<T, void, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F4>
+struct function_object_select_cvqual<const T, void, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F4>
+struct function_object_select_cvqual<volatile T, void, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F4>
+struct function_object_select_cvqual<const volatile T, void, void, void, F4>
+{
+    using type = F4;
+};
+
+template <typename T, typename F1, typename F2, typename F3>
+struct function_object_select_cvqual<T, F1, F2, F3, void>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F2, typename F3>
+struct function_object_select_cvqual<const T, F1, F2, F3, void>
+{
+    using type = F2;
+};
+
+template <typename T, typename F1, typename F2, typename F3>
+struct function_object_select_cvqual<volatile T, F1, F2, F3, void>
+{
+    using type = F3;
+};
+
+template <typename T, typename F1, typename F2, typename F3>
+struct function_object_select_cvqual<const volatile T, F1, F2, F3, void>
+{
+};
+
+template <typename T, typename F2, typename F3>
+struct function_object_select_cvqual<T, void, F2, F3, void>
+{
+};
+
+template <typename T, typename F2, typename F3>
+struct function_object_select_cvqual<const T, void, F2, F3, void>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2, typename F3>
+struct function_object_select_cvqual<volatile T, void, F2, F3, void>
+{
+    using type = F3;
+};
+
+template <typename T, typename F2, typename F3>
+struct function_object_select_cvqual<const volatile T, void, F2, F3, void>
+{
+};
+
+template <typename T, typename F1, typename F3>
+struct function_object_select_cvqual<T, F1, void, F3, void>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F3>
+struct function_object_select_cvqual<const T, F1, void, F3, void>
+{
+};
+
+template <typename T, typename F1, typename F3>
+struct function_object_select_cvqual<volatile T, F1, void, F3, void>
+{
+    using type = F3;
+};
+
+template <typename T, typename F1, typename F3>
+struct function_object_select_cvqual<const volatile T, F1, void, F3, void>
+{
+};
+
+template <typename T, typename F3>
+struct function_object_select_cvqual<T, void, void, F3, void>
+{
+    using type = F3;
+};
+
+template <typename T, typename F3>
+struct function_object_select_cvqual<const T, void, void, F3, void>
+{
+};
+
+template <typename T, typename F3>
+struct function_object_select_cvqual<volatile T, void, void, F3, void>
+{
+    using type = F3;
+};
+
+template <typename T, typename F3>
+struct function_object_select_cvqual<const volatile T, void, void, F3, void>
+{
+};
+
+template <typename T, typename F1, typename F2>
+struct function_object_select_cvqual<T, F1, F2, void, void>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1, typename F2>
+struct function_object_select_cvqual<const T, F1, F2, void, void>
+{
+    using type = F2;
+};
+
+template <typename T, typename F1, typename F2>
+struct function_object_select_cvqual<volatile T, F1, F2, void, void>
+{
+};
+
+template <typename T, typename F1, typename F2>
+struct function_object_select_cvqual<const volatile T, F1, F2, void, void>
+{
+};
+
+template <typename T, typename F2>
+struct function_object_select_cvqual<T, void, F2, void, void>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2>
+struct function_object_select_cvqual<const T, void, F2, void, void>
+{
+    using type = F2;
+};
+
+template <typename T, typename F2>
+struct function_object_select_cvqual<volatile T, void, F2, void, void>
+{
+};
+
+template <typename T, typename F2>
+struct function_object_select_cvqual<const volatile T, void, F2, void, void>
+{
+};
+
+template <typename T, typename F1>
+struct function_object_select_cvqual<T, F1, void, void, void>
+{
+    using type = F1;
+};
+
+template <typename T, typename F1>
+struct function_object_select_cvqual<const T, F1, void, void, void>
+{
+};
+
+template <typename T, typename F1>
+struct function_object_select_cvqual<volatile T, F1, void, void, void>
+{
+};
+
+template <typename T, typename F1>
+struct function_object_select_cvqual<const volatile T, F1, void, void, void>
+{
+};
+
+template <typename T>
+struct function_object_select_cvqual<T, void, void, void, void>
+{
+};
+
+template <typename T>
+struct function_object_select_cvqual<const T, void, void, void, void>
+{
+};
+
+template <typename T>
+struct function_object_select_cvqual<volatile T, void, void, void, void>
+{
+};
+
+template <typename T>
+struct function_object_select_cvqual<const volatile T, void, void, void, void>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_call
+    : function_object_select_cvqual<T,
+                                    type_eval_t<function_object_type<remove_cv_t<T>, A>>,
+                                    type_eval_t<function_object_type<const remove_cv_t<T>, A>>,
+                                    type_eval_t<function_object_type<volatile remove_cv_t<T>, A>>,
+                                    type_eval_t<function_object_type<const volatile remove_cv_t<T>, A>>>
+{
+};
+
+//-----------------------------------------------------------------------------
 
 // Deduces directly from callable type
 
@@ -622,18 +999,14 @@ struct function_type
 
 // Deduces via call operator
 
-template <typename T, typename... Args>
-struct function_type<T,
-                     prototype<Args...>,
-                     void_t<decltype(std::declval<T>().operator()(std::declval<Args>()...))>>
-    : function_type_operator_noexcept<T,
-                                      decltype(std::declval<T>().operator()(std::declval<Args>()...)),
-                                      prototype<Args...>>
+template <typename T, typename A>
+struct function_type<T, A, enable_if_t<std::is_class<remove_cvref_t<T>>::value>>
+    : function_object_call<T, A>
 {
 };
 
-} // namespace v1
 } // namespace detail
+} // namespace v1
 } // namespace lean
 
 #endif // LEAN_DETAIL_FUNCTION_TYPE_HPP

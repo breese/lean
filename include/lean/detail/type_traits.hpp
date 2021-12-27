@@ -369,6 +369,24 @@ using type_identity_t = typename type_identity<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// type_eval
+
+template <typename, typename U, typename = void>
+struct type_eval
+{
+    using type = U;
+};
+
+template <typename T, typename U>
+struct type_eval<T, U, void_t<typename T::type>>
+{
+    using type = typename T::type;
+};
+
+template <typename T, typename U = void>
+using type_eval_t = typename type_eval<T, U>::type;
+
+//-----------------------------------------------------------------------------
 // Helper to bind a projection to a predicate
 
 template <template <template <typename> class, typename, typename> class Predicate,
