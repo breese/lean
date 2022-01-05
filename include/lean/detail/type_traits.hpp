@@ -179,6 +179,38 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// add_type_const
+//
+// Adds const to referenced type
+
+template <typename T>
+struct add_type_const { using type = add_const_t<T>; };
+
+template <typename T>
+struct add_type_const<T&> { using type = add_const_t<T>&; };
+
+template <typename T>
+struct add_type_const<T&&> { using type = add_const_t<T>&&; };
+
+//-----------------------------------------------------------------------------
+// add_type_volatile
+
+template <typename T>
+struct add_type_volatile { using type = add_volatile_t<T>; };
+
+template <typename T>
+struct add_type_volatile<T&> { using type = add_volatile_t<T>&; };
+
+template <typename T>
+struct add_type_volatile<T&&> { using type = add_volatile_t<T>&&; };
+
+//-----------------------------------------------------------------------------
+// add_type_cv
+
+template <typename T>
+struct add_type_cv : add_type_volatile<typename add_type_const<T>::type> {};
+
+//-----------------------------------------------------------------------------
 // remove_member_pointer
 //
 // If T has type "(possibly cv-qualified) pointer to data member T1" then the
