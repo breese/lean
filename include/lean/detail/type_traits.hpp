@@ -401,6 +401,12 @@ using type_identity_t = typename type_identity<T>::type;
 #endif
 
 //-----------------------------------------------------------------------------
+// type_t
+
+template <typename T>
+using type_t = typename T::type;
+
+//-----------------------------------------------------------------------------
 // type_eval
 
 template <typename, typename U, typename = void>
