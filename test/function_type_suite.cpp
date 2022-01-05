@@ -8,6 +8,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <utility> // std::forward
 #include <lean/detail/config.hpp> // attributes
 #include <lean/function_traits.hpp>
 #include <lean/type_traits.hpp>
@@ -34,6 +35,20 @@ struct is_function_type<T,
 {
 };
 
+template <typename, typename, typename = void>
+struct function_type_void
+{
+    using type = void;
+};
+
+template <typename T, typename... Args>
+struct function_type_void<T,
+                          prototype<Args...>,
+                          void_t<function_type_t<T, Args...>>>
+    : function_type<T, Args...>
+{
+};
+
 } // namespace impl
 
 template <typename T, typename... Args>
@@ -41,16 +56,14 @@ struct is_function_type : impl::is_function_type<T, prototype<Args...>>
 {
 };
 
+template <typename T, typename... Args>
+using function_type_void_t = typename impl::function_type_void<T, prototype<Args...>>::type;
+
 } // namespace lean
 
 //-----------------------------------------------------------------------------
 
 class cls;
-
-struct return_mutable {};
-struct return_const {};
-struct return_volatile {};
-struct return_const_volatile {};
 
 struct function_object {
     void invoke();
@@ -278,6 +291,16 @@ struct function_object_mutable
     void operator()();
 };
 
+struct function_object_lvalue
+{
+    void operator()() &;
+};
+
+struct function_object_rvalue
+{
+    void operator()() &&;
+};
+
 struct function_object_const
 {
     void operator()() const;
@@ -291,21 +314,6 @@ struct function_object_const_lvalue
 struct function_object_const_rvalue
 {
     void operator()() const &&;
-};
-
-struct function_object_const_volatile
-{
-    void operator()() const volatile;
-};
-
-struct function_object_const_volatile_lvalue
-{
-    void operator()() const volatile &;
-};
-
-struct function_object_const_volatile_rvalue
-{
-    void operator()() const volatile &&;
 };
 
 struct function_object_volatile
@@ -323,32 +331,37 @@ struct function_object_volatile_rvalue
     void operator()() volatile &&;
 };
 
-struct function_object_lvalue
+struct function_object_const_volatile
 {
-    void operator()() &;
+    void operator()() const volatile;
 };
 
-struct function_object_rvalue
+struct function_object_const_volatile_lvalue
 {
-    void operator()() &&;
+    void operator()() const volatile &;
+};
+
+struct function_object_const_volatile_rvalue
+{
+    void operator()() const volatile &&;
 };
 
 static_assert(is_same<function_type_t<function_object_mutable>, void()>{}, "");
-static_assert(is_same<function_type_t<const function_object_const>, void() const>{}, "");
-static_assert(is_same<function_type_t<const function_object_const_lvalue>, void() const &>{}, "");
-static_assert(is_same<function_type_t<const function_object_const_lvalue&>, void() const &>{}, "");
-static_assert(is_same<function_type_t<const function_object_const_rvalue&&>, void() const &&>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_const_volatile>, void() const volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_const_volatile_lvalue>, void() const volatile &>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_const_volatile_lvalue&>, void() const volatile &>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_const_volatile_rvalue&&>, void() const volatile &&>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_volatile>, void() volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_volatile_lvalue>, void() volatile &>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_volatile_lvalue&>, void() volatile &>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_volatile_rvalue&&>, void() volatile &&>{}, "");
 static_assert(is_same<function_type_t<function_object_lvalue>, void() &>{}, "");
-static_assert(is_same<function_type_t<function_object_lvalue&>, void() &>{}, "");
-static_assert(is_same<function_type_t<function_object_rvalue&&>, void() &&>{}, "");
+static_assert(is_same<function_type_t<function_object_lvalue &>, void() &>{}, "");
+static_assert(is_same<function_type_t<function_object_rvalue &&>, void() &&>{}, "");
+static_assert(is_same<function_type_t<function_object_const const>, void() const>{}, "");
+static_assert(is_same<function_type_t<function_object_const_lvalue const>, void() const &>{}, "");
+static_assert(is_same<function_type_t<function_object_const_lvalue const &>, void() const &>{}, "");
+static_assert(is_same<function_type_t<function_object_const_rvalue const &&>, void() const &&>{}, "");
+static_assert(is_same<function_type_t<function_object_volatile volatile>, void() volatile>{}, "");
+static_assert(is_same<function_type_t<function_object_volatile_lvalue volatile>, void() volatile &>{}, "");
+static_assert(is_same<function_type_t<function_object_volatile_lvalue volatile &>, void() volatile &>{}, "");
+static_assert(is_same<function_type_t<function_object_volatile_rvalue volatile &&>, void() volatile &&>{}, "");
+static_assert(is_same<function_type_t<function_object_const_volatile const volatile>, void() const volatile>{}, "");
+static_assert(is_same<function_type_t<function_object_const_volatile_lvalue const volatile>, void() const volatile &>{}, "");
+static_assert(is_same<function_type_t<function_object_const_volatile_lvalue const volatile &>, void() const volatile &>{}, "");
+static_assert(is_same<function_type_t<function_object_const_volatile_rvalue const volatile &&>, void() const volatile &&>{}, "");
 
 struct function_object_ellipsis_mutable
 {
@@ -780,774 +793,8833 @@ static_assert(is_same<function_type_t<volatile function_object_noexcept_overload
 
 //-----------------------------------------------------------------------------
 
-namespace suite_function_object_near_cvqual
+namespace suite_function_object_value
 {
 
 // Cannot disambiguate all cases as there is no partial ordering between const
 // and volatile [basic.type.qualifier]/5
 
-struct function_object_overload_near_0001
+struct function_object_0000
 {
-    return_mutable operator()();
-    // return_const operator()() const;
-    // return_mutable operator()() volatile;
-    // return_const_mutable operator()() const volatile;
+    // void operator()();
+    // void operator()() const;
+    // void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0001>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_0001>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_0001>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0001>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0001>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_0001>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_0001>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0001>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0001>, return_mutable>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0001>, return_mutable()>{}, "");
-
-struct function_object_overload_near_0010
+struct function_object_0001
 {
-    // return_mutable operator()();
-    return_const operator()() const;
-    // return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    void operator()();
+    // void operator()() const;
+    // void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0010>{}, "");
-static_assert( is_invocable<const function_object_overload_near_0010>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_0010>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0010>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0010>{}, "");
-static_assert( is_function_type<const function_object_overload_near_0010>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_0010>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0010>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_0010>, return_const>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0010>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_0010>, return_const() const>{}, "");
-
-struct function_object_overload_near_0011
+struct function_object_0010
 {
-    return_mutable operator()();
-    return_const operator()() const;
-    // return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    // void operator()();
+    void operator()() const;
+    // void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0011>{}, "");
-static_assert( is_invocable<const function_object_overload_near_0011>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_0011>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0011>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0011>{}, "");
-static_assert( is_function_type<const function_object_overload_near_0011>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_0011>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0011>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0011>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_0011>, return_const>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0011>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_0011>, return_const() const>{}, "");
-
-struct function_object_overload_near_0100
+struct function_object_0011
 {
-    // return_mutable operator()();
-    // return_const operator()() const;
-    return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    void operator()();
+    void operator()() const;
+    // void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0100>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_0100>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_0100>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0100>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0100>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_0100>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_0100>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0100>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0100>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0100>, return_volatile() volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_0100>, return_volatile() volatile>{}, "");
-
-struct function_object_overload_near_0101
+struct function_object_0100
 {
-    return_mutable operator()();
-    // return_const operator()() const;
-    return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    // void operator()();
+    // void operator()() const;
+    void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0101>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_0101>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_0101>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0101>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0101>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_0101>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_0101>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0101>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0101>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0101>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0101>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_0101>, return_volatile() volatile>{}, "");
-
-struct function_object_overload_near_0110
+struct function_object_0101
 {
-    // return_mutable operator()();
-    return_const operator()() const;
-    return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    void operator()();
+    // void operator()() const;
+    void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert(!is_invocable<function_object_overload_near_0110>{}, "");
-static_assert( is_invocable<const function_object_overload_near_0110>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_0110>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0110>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
 
-static_assert(!is_function_type<function_object_overload_near_0110>{}, "");
-static_assert( is_function_type<const function_object_overload_near_0110>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_0110>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0110>{}, "");
-
-static_assert(is_same<invoke_result_t<const function_object_overload_near_0110>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0110>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<const function_object_overload_near_0110>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_0110>, return_volatile() volatile>{}, "");
-
-struct function_object_overload_near_0111
+struct function_object_0110
 {
-    return_mutable operator()();
-    return_const operator()() const;
-    return_volatile operator()() volatile;
-    // return_const_volatile operator()() const volatile;
+    // void operator()();
+    void operator()() const;
+    void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_0111>{}, "");
-static_assert( is_invocable<const function_object_overload_near_0111>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_0111>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_0111>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_0111>{}, "");
-static_assert( is_function_type<const function_object_overload_near_0111>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_0111>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_0111>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_0111>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_0111>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_0111>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_0111>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_0111>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_0111>, return_volatile() volatile>{}, "");
-
-struct function_object_overload_near_1000
+struct function_object_0111
 {
-    // return_mutable operator()();
-    // return_const operator()() const;
-    // return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    void operator()();
+    void operator()() const;
+    void operator()() volatile;
+    // void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1000>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1000>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1000>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1000>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1000>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1000>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1000>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1000>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1000>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1000>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1001
+struct function_object_1000
 {
-    return_mutable operator()();
-    // return_const operator()() const;
-    // return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    // void operator()();
+    // void operator()() const;
+    // void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1001>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1001>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1001>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1001>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1001>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1001>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1001>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1001>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_1001>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1001>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1001>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1001>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1001>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1001>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1001>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1001>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1010
+struct function_object_1001
 {
-    // return_mutable operator()();
-    return_const operator()() const;
-    // return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    void operator()();
+    // void operator()() const;
+    // void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1010>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1010>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1010>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1010>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1010>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1010>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1010>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1010>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_1010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1010>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1010>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1010>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1010>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1010>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1010>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1011
+struct function_object_1010
 {
-    return_mutable operator()();
-    return_const operator()() const;
-    // return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    // void operator()();
+    void operator()() const;
+    // void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1011>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1011>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1011>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1011>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1011>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1011>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1011>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1011>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_1011>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1011>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1011>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1011>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1011>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1011>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1011>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1100
+struct function_object_1011
 {
-    // return_mutable operator()();
-    // return_const operator()() const;
-    return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    void operator()();
+    void operator()() const;
+    // void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1100>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1100>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1100>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1100>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1100>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1100>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1100>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1100>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_1100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1100>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1100>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1100>, return_volatile() volatile>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1100>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1100>, return_volatile() volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1100>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1101
+struct function_object_1100
 {
-    return_mutable operator()();
-    // return_const operator()() const;
-    return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    // void operator()();
+    // void operator()() const;
+    void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_1101>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1101>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1101>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1101>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_1101>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1101>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1101>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1101>{}, "");
 
-static_assert(is_same<invoke_result_t<function_object_overload_near_1101>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1101>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1101>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1101>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_1101>, return_mutable()>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_1101>, return_const_volatile() const volatile>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1101>, return_volatile() volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1101>, return_const_volatile() const volatile>{}, "");
-
-struct function_object_overload_near_1110
+struct function_object_1101
 {
-    // return_mutable operator()();
-    return_const operator()() const;
-    return_volatile operator()() volatile;
-    return_const_volatile operator()() const volatile;
+    void operator()();
+    // void operator()() const;
+    void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert(!is_invocable<function_object_overload_near_1110>{}, "");
-static_assert( is_invocable<const function_object_overload_near_1110>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_1110>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_1110>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
 
-static_assert(!is_function_type<function_object_overload_near_1110>{}, "");
-static_assert( is_function_type<const function_object_overload_near_1110>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_1110>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_1110>{}, "");
-
-static_assert(is_same<invoke_result_t<const function_object_overload_near_1110>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_1110>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_1110>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<const function_object_overload_near_1110>, return_const() const>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_1110>, return_volatile() volatile>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_1110>, return_const_volatile() const volatile>{}, "");
-
-#if __cpp_noexcept_function_type >= 201510L
-
-struct function_object_overload_near_noexcept_x0001
+struct function_object_1110
 {
-    return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    // return_mutable operator()() volatile noexcept;
-    // return_const_mutable operator()() const volatile noexcept;
+    // void operator()();
+    void operator()() const;
+    void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0001>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
 
-static_assert( is_function_type<function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_noexcept_x0001>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0001>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0001>, return_mutable>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0001>, return_mutable() noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0010
+struct function_object_1111
 {
-    // return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
+    void operator()();
+    void operator()() const;
+    void operator()() volatile;
+    void operator()() const volatile;
 };
 
-static_assert( is_invocable<function_object_overload_near_noexcept_x0010>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x0010>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_noexcept_x0010>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0010>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x0010>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x0010>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_noexcept_x0010>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0010>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x0010>, return_const>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0010>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x0010>, return_const() const noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0011
-{
-    return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x0011>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x0011>{}, "");
-static_assert(!is_invocable<volatile function_object_overload_near_noexcept_x0011>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0011>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x0011>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x0011>{}, "");
-static_assert(!is_function_type<volatile function_object_overload_near_noexcept_x0011>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0011>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0011>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x0011>, return_const>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0011>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x0011>, return_const() const noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0100
-{
-    // return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x0100>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_noexcept_x0100>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x0100>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0100>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x0100>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_noexcept_x0100>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x0100>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0100>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x0100>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0100>, return_volatile() volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x0100>, return_volatile() volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0101
-{
-    return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x0101>{}, "");
-static_assert(!is_invocable<const function_object_overload_near_noexcept_x0101>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x0101>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0101>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x0101>{}, "");
-static_assert(!is_function_type<const function_object_overload_near_noexcept_x0101>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x0101>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0101>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0101>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x0101>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0101>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x0101>, return_volatile() volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0110
-{
-    // return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert(!is_invocable<function_object_overload_near_noexcept_x0110>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x0110>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x0110>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0110>{}, "");
-
-static_assert(!is_function_type<function_object_overload_near_noexcept_x0110>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x0110>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x0110>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0110>{}, "");
-
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x0110>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x0110>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x0110>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x0110>, return_volatile() volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x0111
-{
-    return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    // return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x0111>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x0111>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x0111>{}, "");
-static_assert(!is_invocable<const volatile function_object_overload_near_noexcept_x0111>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x0111>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x0111>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x0111>{}, "");
-static_assert(!is_function_type<const volatile function_object_overload_near_noexcept_x0111>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x0111>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x0111>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x0111>, return_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x0111>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x0111>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x0111>, return_volatile() volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1000
-{
-    // return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1000>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1000>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1000>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1000>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1000>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1000>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1000>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1000>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1000>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1001
-{
-    return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1001>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1001>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1001>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1001>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1001>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1001>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1001>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1001>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1001>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1001>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1001>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1010
-{
-    // return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1010>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1010>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1010>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1010>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1010>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1010>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1010>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1010>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1010>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1010>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1011
-{
-    return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    // return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1011>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1011>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1011>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1011>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1011>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1011>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1011>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1011>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1011>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1011>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1011>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1100
-{
-    // return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1100>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1100>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1100>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1100>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1100>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1100>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1100>, return_volatile() volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1100>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1100>, return_volatile() volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1100>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1101
-{
-    return_mutable operator()() noexcept;
-    // return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert( is_invocable<function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1101>{}, "");
-
-static_assert( is_function_type<function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1101>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1101>{}, "");
-
-static_assert(is_same<invoke_result_t<function_object_overload_near_noexcept_x1101>, return_mutable>{}, "");
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1101>, return_const_volatile>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1101>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1101>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<function_object_overload_near_noexcept_x1101>, return_mutable() noexcept>{}, "");
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1101>, return_const_volatile() const volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1101>, return_volatile() volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1101>, return_const_volatile() const volatile noexcept>{}, "");
-
-struct function_object_overload_near_noexcept_x1110
-{
-    // return_mutable operator()() noexcept;
-    return_const operator()() const noexcept;
-    return_volatile operator()() volatile noexcept;
-    return_const_volatile operator()() const volatile noexcept;
-};
-
-static_assert(!is_invocable<function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_invocable<const function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_invocable<volatile function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_near_noexcept_x1110>{}, "");
-
-static_assert(!is_function_type<function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_function_type<const function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_function_type<volatile function_object_overload_near_noexcept_x1110>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_near_noexcept_x1110>{}, "");
-
-static_assert(is_same<invoke_result_t<const function_object_overload_near_noexcept_x1110>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_near_noexcept_x1110>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_near_noexcept_x1110>, return_const_volatile>{}, "");
-
-static_assert(is_same<function_type_t<const function_object_overload_near_noexcept_x1110>, return_const() const noexcept>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_near_noexcept_x1110>, return_volatile() volatile noexcept>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_near_noexcept_x1110>, return_const_volatile() const volatile noexcept>{}, "");
-
-#endif
-
-} // namespace suite_function_object_near_cvqual
+static_assert(is_same<void(), function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void(), function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void() volatile, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+} // namespace suite_function_object_value
 
 //-----------------------------------------------------------------------------
 
-namespace suite_function_object_near_cvqual_lvalue
+namespace suite_function_object_value_ellipsis
 {
 
-struct function_object_overload_lnear_1110
+struct function_object_000
 {
-    // return_mutable operator()() &;
-    return_const operator()() const &;
-    return_volatile operator()() volatile &;
-    return_const_volatile operator()() const volatile &;
+    // void operator()(...);
+    // void operator()(...) const;
+    // void operator()(...) volatile;
+    // void operator()(...) const volatile;
 };
 
-static_assert(!is_invocable<function_object_overload_lnear_1110&>{}, "");
-static_assert( is_invocable<const function_object_overload_lnear_1110&>{}, "");
-static_assert( is_invocable<volatile function_object_overload_lnear_1110&>{}, "");
-static_assert( is_invocable<const volatile function_object_overload_lnear_1110&>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile &&>>{}, "");
 
-static_assert(!is_function_type<function_object_overload_lnear_1110&>{}, "");
-static_assert( is_function_type<const function_object_overload_lnear_1110&>{}, "");
-static_assert( is_function_type<volatile function_object_overload_lnear_1110&>{}, "");
-static_assert( is_function_type<const volatile function_object_overload_lnear_1110&>{}, "");
+struct function_object_0001
+{
+    void operator()(...);
+    // void operator()(...) const;
+    // void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
 
-static_assert(is_same<invoke_result_t<const function_object_overload_lnear_1110&>, return_const>{}, "");
-static_assert(is_same<invoke_result_t<volatile function_object_overload_lnear_1110&>, return_volatile>{}, "");
-static_assert(is_same<invoke_result_t<const volatile function_object_overload_lnear_1110&>, return_const_volatile>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
 
-static_assert(is_same<function_type_t<const function_object_overload_lnear_1110&>, return_const() const &>{}, "");
-static_assert(is_same<function_type_t<volatile function_object_overload_lnear_1110&>, return_volatile() volatile &>{}, "");
-static_assert(is_same<function_type_t<const volatile function_object_overload_lnear_1110&>, return_const_volatile() const volatile &>{}, "");
+struct function_object_0010
+{
+    // void operator()(...);
+    void operator()(...) const;
+    // void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
 
-} // namespace suite_function_object_near_cvqual_lvalue
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()(...);
+    void operator()(...) const;
+    // void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()(...);
+    // void operator()(...) const;
+    void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()(...);
+    // void operator()(...) const;
+    void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()(...);
+    void operator()(...) const;
+    void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()(...);
+    void operator()(...) const;
+    void operator()(...) volatile;
+    // void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()(...);
+    // void operator()(...) const;
+    // void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()(...);
+    // void operator()(...) const;
+    // void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()(...);
+    void operator()(...) const;
+    // void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()(...);
+    void operator()(...) const;
+    // void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()(...);
+    // void operator()(...) const;
+    void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()(...);
+    // void operator()(...) const;
+    void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()(...);
+    void operator()(...) const;
+    void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()(...);
+    void operator()(...) const;
+    void operator()(...) volatile;
+    void operator()(...) const volatile;
+};
+
+static_assert(is_same<void(...), function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void(...), function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void(...) const, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void(...) volatile, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void(...) const volatile, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+} // namespace suite_function_object_value_ellipsis
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_value_noexcept
+{
+
+#if __cpp_noexcept_function_type >= 201510L
+
+struct function_object_000
+{
+    // void operator()() noexcept;
+    // void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_000 const volatile &&>>{}, "");
+
+struct function_object_0001
+{
+    void operator()() noexcept;
+    // void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
+
+struct function_object_0010
+{
+    // void operator()() noexcept;
+    void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()() noexcept;
+    void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()() noexcept;
+    // void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()() noexcept;
+    // void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()() noexcept;
+    void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()() noexcept;
+    void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    // void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()() noexcept;
+    // void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()() noexcept;
+    // void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()() noexcept;
+    void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()() noexcept;
+    void operator()() const noexcept;
+    // void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()() noexcept;
+    // void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()() noexcept;
+    // void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()() noexcept;
+    void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()() noexcept;
+    void operator()() const noexcept;
+    void operator()() volatile noexcept;
+    void operator()() const volatile noexcept;
+};
+
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void() noexcept, function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const noexcept, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void() volatile noexcept, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile noexcept, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+#endif
+
+} // namespace suite_function_object_value_noexcept
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_lvalue
+{
+
+struct function_object_0000
+{
+    // void operator()() &;
+    // void operator()() const &;
+    // void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &&>>{}, "");
+
+struct function_object_0001
+{
+    void operator()() &;
+    // void operator()() const &;
+    // void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
+
+struct function_object_0010
+{
+    // void operator()() &;
+    void operator()() const &;
+    // void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()() &;
+    void operator()() const &;
+    // void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()() &;
+    // void operator()() const &;
+    void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()() &;
+    // void operator()() const &;
+    void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()() &;
+    void operator()() const &;
+    void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()() &;
+    void operator()() const &;
+    void operator()() volatile &;
+    // void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()() &;
+    // void operator()() const &;
+    // void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()() &;
+    // void operator()() const &;
+    // void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()() &;
+    void operator()() const &;
+    // void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()() &;
+    void operator()() const &;
+    // void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()() &;
+    // void operator()() const &;
+    void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()() &;
+    // void operator()() const &;
+    void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()() &;
+    void operator()() const &;
+    void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()() &;
+    void operator()() const &;
+    void operator()() volatile &;
+    void operator()() const volatile &;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+} // namespace suite_function_object_lvalue
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_lvalue_noexcept
+{
+
+#if __cpp_noexcept_function_type >= 201510L
+
+struct function_object_0000
+{
+    // void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &&>>{}, "");
+
+struct function_object_0001
+{
+    void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
+
+struct function_object_0010
+{
+    // void operator()() & noexcept;
+    void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()() & noexcept;
+    void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()() & noexcept;
+    void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()() & noexcept;
+    void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    // void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()() & noexcept;
+    void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()() & noexcept;
+    void operator()() const & noexcept;
+    // void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()() & noexcept;
+    // void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()() & noexcept;
+    void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()() & noexcept;
+    void operator()() const & noexcept;
+    void operator()() volatile & noexcept;
+    void operator()() const volatile & noexcept;
+};
+
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void() & noexcept, function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const & noexcept, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void() volatile & noexcept, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile & noexcept, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+#endif
+
+} // namespace suite_function_object_lvalue_noexcept
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_rvalue
+{
+
+struct function_object_0000
+{
+    // void operator()() &&;
+    // void operator()() const &&;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &&>>{}, "");
+
+struct function_object_0001
+{
+    void operator()() &&;
+    // void operator()() const &&;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
+
+struct function_object_0010
+{
+    // void operator()() &&;
+    void operator()() const &&;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()() &&;
+    void operator()() const &&;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()() &&;
+    // void operator()() const &&;
+    void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()() &&;
+    // void operator()() const &&;
+    void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()() &&;
+    void operator()() const &&;
+    void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()() &&;
+    void operator()() const &&;
+    void operator()() volatile &&;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()() &&;
+    // void operator()() const &&;
+    // void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()() &&;
+    // void operator()() const &&;
+    // void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()() &&;
+    void operator()() const &&;
+    // void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()() &&;
+    void operator()() const &&;
+    // void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()() &&;
+    // void operator()() const &&;
+    void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()() &&;
+    // void operator()() const &&;
+    void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()() &&;
+    void operator()() const &&;
+    void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()() &&;
+    void operator()() const &&;
+    void operator()() volatile &&;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+} // namespace suite_function_object_rvalue
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_rvalue_noexcept
+{
+
+#if __cpp_noexcept_function_type >= 201510L
+
+struct function_object_0000
+{
+    // void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0000 const volatile &&>>{}, "");
+
+struct function_object_0001
+{
+    void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0001>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_0001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0001 const volatile &&>>{}, "");
+
+struct function_object_0010
+{
+    // void operator()() && noexcept;
+    void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_0010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_0010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0010 const volatile &&>>{}, "");
+
+struct function_object_0011
+{
+    void operator()() && noexcept;
+    void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0011>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_0011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_0011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0011 const volatile &&>>{}, "");
+
+struct function_object_0100
+{
+    // void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_0100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_0100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0100 const volatile &&>>{}, "");
+
+struct function_object_0101
+{
+    void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0101>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_0101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_0101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0101 const volatile &&>>{}, "");
+
+struct function_object_0110
+{
+    // void operator()() && noexcept;
+    void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_0110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_0110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0110 const volatile &&>>{}, "");
+
+struct function_object_0111
+{
+    void operator()() && noexcept;
+    void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    // void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_0111>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_0111 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_0111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_0111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_0111 const volatile &&>>{}, "");
+
+struct function_object_1000
+{
+    // void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1000 const volatile &&>>{}, "");
+
+struct function_object_1001
+{
+    void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1001>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_1001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1001 const volatile &&>>{}, "");
+
+struct function_object_1010
+{
+    // void operator()() && noexcept;
+    void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_1010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_1010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1010 const volatile &&>>{}, "");
+
+struct function_object_1011
+{
+    void operator()() && noexcept;
+    void operator()() const && noexcept;
+    // void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1011>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_1011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_1011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1011 const volatile &&>>{}, "");
+
+struct function_object_1100
+{
+    // void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_1100 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_1100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1100 const volatile &&>>{}, "");
+
+
+struct function_object_1101
+{
+    void operator()() && noexcept;
+    // void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1101>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_1101 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_1101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1101 const volatile &&>>{}, "");
+
+struct function_object_1110
+{
+    // void operator()() && noexcept;
+    void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_1110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_1110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1110 const volatile &&>>{}, "");
+
+struct function_object_1111
+{
+    void operator()() && noexcept;
+    void operator()() const && noexcept;
+    void operator()() volatile && noexcept;
+    void operator()() const volatile && noexcept;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_1111>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 &>>{}, "");
+static_assert(is_same<void() && noexcept, function_type_void_t<function_object_1111 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const &>>{}, "");
+static_assert(is_same<void() const && noexcept, function_type_void_t<function_object_1111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 volatile &>>{}, "");
+static_assert(is_same<void() volatile && noexcept, function_type_void_t<function_object_1111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_1111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile && noexcept, function_type_void_t<function_object_1111 const volatile &&>>{}, "");
+
+#endif
+
+} // namespace suite_function_object_rvalue_noexcept
+
+//-----------------------------------------------------------------------------
+
+namespace suite_function_object_overload_mixed
+{
+
+struct function_object_00000000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00000000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000000 const volatile &&>>{}, "");
+
+struct function_object_00000001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00000001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00000001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000001 const volatile &&>>{}, "");
+
+struct function_object_00000010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00000010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00000010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000010 const volatile &&>>{}, "");
+
+struct function_object_00000011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00000011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00000011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00000011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000011 const volatile &&>>{}, "");
+
+struct function_object_00000100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000100 const volatile &&>>{}, "");
+
+struct function_object_00000101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00000101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00000101 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000101 const volatile &&>>{}, "");
+
+struct function_object_00000110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00000110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000110 const volatile &&>>{}, "");
+
+struct function_object_00000111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00000111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00000111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00000111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00000111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00000111 const volatile &&>>{}, "");
+
+struct function_object_00001000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00001000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001000 const volatile &&>>{}, "");
+
+struct function_object_00001001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00001001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00001001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001001 const volatile &&>>{}, "");
+
+struct function_object_00001010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00001010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00001010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001010 const volatile &&>>{}, "");
+
+struct function_object_00001011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00001011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00001011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00001011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001011 const volatile &&>>{}, "");
+
+struct function_object_00001100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001100 const volatile &&>>{}, "");
+
+struct function_object_00001101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00001101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00001101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001101 const volatile &&>>{}, "");
+
+struct function_object_00001110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00001110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001110 const volatile &&>>{}, "");
+
+struct function_object_00001111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00001111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00001111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00001111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00001111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00001111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00001111 const volatile &&>>{}, "");
+
+struct function_object_00010000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010000 const volatile &&>>{}, "");
+
+struct function_object_00010001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00010001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00010001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010001 const volatile &&>>{}, "");
+
+struct function_object_00010010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00010010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010010 const volatile &&>>{}, "");
+
+struct function_object_00010011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00010011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00010011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00010011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010011 const volatile &&>>{}, "");
+
+struct function_object_00010100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00010100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010100 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010100 const volatile &&>>{}, "");
+
+struct function_object_00010101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00010101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00010101 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010101 const volatile &&>>{}, "");
+
+struct function_object_00010110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00010110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00010110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010110 const volatile &&>>{}, "");
+
+struct function_object_00010111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00010111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00010111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00010111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00010111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00010111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00010111 const volatile &&>>{}, "");
+
+struct function_object_00011000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011000 const volatile &&>>{}, "");
+
+struct function_object_00011001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00011001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00011001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011001 const volatile &&>>{}, "");
+
+struct function_object_00011010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00011010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011010 const volatile &&>>{}, "");
+
+struct function_object_00011011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00011011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00011011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00011011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011011 const volatile &&>>{}, "");
+
+struct function_object_00011100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00011100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011100 const volatile &&>>{}, "");
+
+struct function_object_00011101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00011101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00011101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011101 const volatile &&>>{}, "");
+
+struct function_object_00011110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00011110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00011110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011110 const volatile &&>>{}, "");
+
+struct function_object_00011111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00011111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00011111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00011111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00011111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00011111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00011111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00011111 const volatile &&>>{}, "");
+
+struct function_object_00100000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00100000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100000 const volatile &&>>{}, "");
+
+struct function_object_00100001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00100001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00100001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100001 const volatile &&>>{}, "");
+
+struct function_object_00100010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00100010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00100010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100010 const volatile &&>>{}, "");
+
+struct function_object_00100011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00100011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00100011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00100011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100011 const volatile &&>>{}, "");
+
+struct function_object_00100100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100100 const volatile &&>>{}, "");
+
+struct function_object_00100101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00100101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00100101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100101 const volatile &&>>{}, "");
+
+struct function_object_00100110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00100110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100110 const volatile &&>>{}, "");
+
+struct function_object_00100111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00100111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00100111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00100111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00100111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00100111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00100111 const volatile &&>>{}, "");
+
+struct function_object_00101000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00101000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101000 const volatile &&>>{}, "");
+
+struct function_object_00101001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00101001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00101001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101001 const volatile &&>>{}, "");
+
+struct function_object_00101010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00101010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00101010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101010 const volatile &&>>{}, "");
+
+struct function_object_00101011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00101011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00101011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00101011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101011 const volatile &&>>{}, "");
+
+struct function_object_00101100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101100 const volatile &&>>{}, "");
+
+struct function_object_00101101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00101101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00101101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101101 const volatile &&>>{}, "");
+
+struct function_object_00101110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00101110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101110 const volatile &&>>{}, "");
+
+struct function_object_00101111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00101111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00101111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00101111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00101111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00101111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00101111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00101111 const volatile &&>>{}, "");
+
+struct function_object_00110000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110000 const volatile &&>>{}, "");
+
+struct function_object_00110001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00110001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00110001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110001 const volatile &&>>{}, "");
+
+struct function_object_00110010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00110010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110010 const volatile &&>>{}, "");
+
+struct function_object_00110011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00110011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00110011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00110011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110011 const volatile &&>>{}, "");
+
+struct function_object_00110100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00110100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110100 const volatile &&>>{}, "");
+
+struct function_object_00110101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00110101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00110101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110101 const volatile &&>>{}, "");
+
+struct function_object_00110110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00110110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00110110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110110 const volatile &&>>{}, "");
+
+struct function_object_00110111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00110111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00110111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00110111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00110111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00110111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00110111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00110111 const volatile &&>>{}, "");
+
+struct function_object_00111000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111000 const volatile &&>>{}, "");
+
+struct function_object_00111001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00111001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00111001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111001 const volatile &&>>{}, "");
+
+struct function_object_00111010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00111010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111010 const volatile &&>>{}, "");
+
+struct function_object_00111011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00111011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00111011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00111011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111011 const volatile &&>>{}, "");
+
+struct function_object_00111100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00111100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111100 const volatile &&>>{}, "");
+
+struct function_object_00111101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00111101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00111101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111101 const volatile &&>>{}, "");
+
+struct function_object_00111110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_00111110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00111110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111110 const volatile &&>>{}, "");
+
+struct function_object_00111111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_00111111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_00111111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_00111111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_00111111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_00111111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_00111111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_00111111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_00111111 const volatile &&>>{}, "");
+
+struct function_object_01000000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000000 const volatile &&>>{}, "");
+
+struct function_object_01000001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01000001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01000001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000001 const volatile &&>>{}, "");
+
+struct function_object_01000010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01000010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000010 const volatile &&>>{}, "");
+
+struct function_object_01000011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01000011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01000011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01000011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000011 const volatile &&>>{}, "");
+
+struct function_object_01000100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000100 const volatile &&>>{}, "");
+
+struct function_object_01000101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01000101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01000101 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000101 const volatile &&>>{}, "");
+
+struct function_object_01000110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01000110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000110 const volatile &&>>{}, "");
+
+struct function_object_01000111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01000111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01000111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01000111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01000111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01000111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01000111 const volatile &&>>{}, "");
+
+struct function_object_01001000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001000 const volatile &&>>{}, "");
+
+struct function_object_01001001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01001001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01001001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001001 const volatile &&>>{}, "");
+
+struct function_object_01001010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01001010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001010 const volatile &&>>{}, "");
+
+struct function_object_01001011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01001011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01001011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01001011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001011 const volatile &&>>{}, "");
+
+struct function_object_01001100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001100 const volatile &&>>{}, "");
+
+struct function_object_01001101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01001101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01001101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001101 const volatile &&>>{}, "");
+
+struct function_object_01001110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01001110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001110 const volatile &&>>{}, "");
+
+struct function_object_01001111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01001111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01001111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01001111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01001111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01001111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01001111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01001111 const volatile &&>>{}, "");
+
+struct function_object_01010000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010000 const volatile &&>>{}, "");
+
+struct function_object_01010001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01010001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01010001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010001 const volatile &&>>{}, "");
+
+struct function_object_01010010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01010010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010010 const volatile &&>>{}, "");
+
+struct function_object_01010011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01010011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01010011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01010011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010011 const volatile &&>>{}, "");
+
+struct function_object_01010100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01010100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010100 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010100 const volatile &&>>{}, "");
+
+struct function_object_01010101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01010101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01010101 &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010101 const volatile &&>>{}, "");
+
+struct function_object_01010110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01010110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01010110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010110 const volatile &&>>{}, "");
+
+struct function_object_01010111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01010111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01010111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01010111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01010111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01010111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01010111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01010111 const volatile &&>>{}, "");
+
+struct function_object_01011000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011000 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011000 const volatile &&>>{}, "");
+
+struct function_object_01011001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01011001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01011001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011001 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011001 const volatile &&>>{}, "");
+
+struct function_object_01011010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01011010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011010 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011010 const volatile &&>>{}, "");
+
+struct function_object_01011011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01011011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01011011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01011011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011011 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011011 const volatile &&>>{}, "");
+
+struct function_object_01011100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01011100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011100 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011100 const volatile &&>>{}, "");
+
+struct function_object_01011101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01011101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01011101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011101 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011101 const volatile &&>>{}, "");
+
+struct function_object_01011110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01011110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01011110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011110 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011110 const volatile &&>>{}, "");
+
+struct function_object_01011111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01011111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01011111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01011111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01011111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01011111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01011111 volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01011111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01011111 const volatile &&>>{}, "");
+
+struct function_object_01100000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100000 const volatile &&>>{}, "");
+
+struct function_object_01100001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01100001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01100001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100001 const volatile &&>>{}, "");
+
+struct function_object_01100010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01100010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100010 const volatile &&>>{}, "");
+
+struct function_object_01100011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01100011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01100011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01100011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100011 const volatile &&>>{}, "");
+
+struct function_object_01100100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100100 const volatile &&>>{}, "");
+
+struct function_object_01100101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01100101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01100101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100101 const volatile &&>>{}, "");
+
+struct function_object_01100110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01100110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100110 const volatile &&>>{}, "");
+
+struct function_object_01100111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01100111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01100111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01100111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01100111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01100111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01100111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01100111 const volatile &&>>{}, "");
+
+struct function_object_01101000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101000 const volatile &&>>{}, "");
+
+struct function_object_01101001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01101001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01101001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101001 const volatile &&>>{}, "");
+
+struct function_object_01101010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01101010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101010 const volatile &&>>{}, "");
+
+struct function_object_01101011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01101011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01101011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01101011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101011 const volatile &&>>{}, "");
+
+struct function_object_01101100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101100 const volatile &&>>{}, "");
+
+struct function_object_01101101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01101101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01101101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101101 const volatile &&>>{}, "");
+
+struct function_object_01101110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01101110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101110 const volatile &&>>{}, "");
+
+struct function_object_01101111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01101111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01101111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01101111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01101111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01101111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01101111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01101111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01101111 const volatile &&>>{}, "");
+
+struct function_object_01110000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110000 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110000 const volatile &&>>{}, "");
+
+struct function_object_01110001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01110001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01110001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110001 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110001 const volatile &&>>{}, "");
+
+struct function_object_01110010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01110010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110010 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110010 const volatile &&>>{}, "");
+
+struct function_object_01110011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01110011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01110011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01110011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110011 const &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110011 const volatile &&>>{}, "");
+
+struct function_object_01110100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01110100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110100 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110100 const volatile &&>>{}, "");
+
+struct function_object_01110101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01110101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01110101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110101 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110101 const volatile &&>>{}, "");
+
+struct function_object_01110110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01110110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01110110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110110 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110110 const volatile &&>>{}, "");
+
+struct function_object_01110111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01110111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01110111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01110111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110111 const &>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01110111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01110111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01110111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01110111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01110111 const volatile &&>>{}, "");
+
+struct function_object_01111000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111000 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111000 const volatile &&>>{}, "");
+
+struct function_object_01111001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01111001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01111001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111001 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111001 const volatile &&>>{}, "");
+
+struct function_object_01111010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01111010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111010 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111010 const volatile &&>>{}, "");
+
+struct function_object_01111011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01111011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01111011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01111011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111011 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111011 const volatile &&>>{}, "");
+
+struct function_object_01111100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01111100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111100 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111100 const volatile &&>>{}, "");
+
+struct function_object_01111101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01111101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01111101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111101 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111101 const volatile &&>>{}, "");
+
+struct function_object_01111110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_01111110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01111110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111110 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111110 const volatile &&>>{}, "");
+
+struct function_object_01111111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    // void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_01111111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_01111111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_01111111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_01111111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_01111111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_01111111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_01111111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_01111111 const volatile &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_01111111 const volatile &&>>{}, "");
+
+struct function_object_10000000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10000000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000000 const volatile &&>>{}, "");
+
+struct function_object_10000001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10000001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10000001 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000001 const volatile &&>>{}, "");
+
+struct function_object_10000010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10000010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10000010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000010 const volatile &&>>{}, "");
+
+struct function_object_10000011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10000011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10000011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10000011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000011 const volatile &&>>{}, "");
+
+struct function_object_10000100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000100 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000100 const volatile &&>>{}, "");
+
+struct function_object_10000101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10000101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10000101 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000101 const volatile &&>>{}, "");
+
+struct function_object_10000110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10000110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000110 const volatile &&>>{}, "");
+
+struct function_object_10000111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10000111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10000111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10000111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10000111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10000111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10000111 const volatile &&>>{}, "");
+
+struct function_object_10001000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10001000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001000 const volatile &&>>{}, "");
+
+struct function_object_10001001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10001001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10001001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001001 const volatile &&>>{}, "");
+
+struct function_object_10001010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10001010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10001010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001010 const volatile &&>>{}, "");
+
+struct function_object_10001011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10001011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10001011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10001011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001011 const volatile &&>>{}, "");
+
+struct function_object_10001100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001100 const volatile &&>>{}, "");
+
+struct function_object_10001101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10001101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10001101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001101 const volatile &&>>{}, "");
+
+struct function_object_10001110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10001110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001110 const volatile &&>>{}, "");
+
+struct function_object_10001111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10001111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10001111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10001111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10001111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10001111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10001111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10001111 const volatile &&>>{}, "");
+
+struct function_object_10010000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010000 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010000 const volatile &&>>{}, "");
+
+struct function_object_10010001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10010001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10010001 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010001 const volatile &&>>{}, "");
+
+struct function_object_10010010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10010010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010010 const volatile &&>>{}, "");
+
+struct function_object_10010011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10010011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10010011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10010011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010011 const volatile &&>>{}, "");
+
+struct function_object_10010100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10010100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010100 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010100 const volatile &&>>{}, "");
+
+struct function_object_10010101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10010101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10010101 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010101 const volatile &&>>{}, "");
+
+struct function_object_10010110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10010110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10010110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010110 const volatile &&>>{}, "");
+
+struct function_object_10010111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10010111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10010111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10010111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10010111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10010111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10010111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10010111 const volatile &&>>{}, "");
+
+struct function_object_10011000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011000 const volatile &&>>{}, "");
+
+struct function_object_10011001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10011001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10011001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011001 const volatile &&>>{}, "");
+
+struct function_object_10011010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10011010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011010 const volatile &&>>{}, "");
+
+struct function_object_10011011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10011011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10011011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10011011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011011 const volatile &&>>{}, "");
+
+struct function_object_10011100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10011100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011100 const volatile &&>>{}, "");
+
+struct function_object_10011101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10011101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10011101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011101 const volatile &&>>{}, "");
+
+struct function_object_10011110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10011110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10011110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011110 const volatile &&>>{}, "");
+
+struct function_object_10011111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10011111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10011111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10011111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10011111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10011111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10011111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10011111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10011111 const volatile &&>>{}, "");
+
+struct function_object_10100000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10100000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100000 const volatile &&>>{}, "");
+
+struct function_object_10100001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10100001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10100001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100001 const volatile &&>>{}, "");
+
+struct function_object_10100010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10100010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10100010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100010 const volatile &&>>{}, "");
+
+struct function_object_10100011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10100011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10100011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10100011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100011 const volatile &&>>{}, "");
+
+struct function_object_10100100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100100 const volatile &&>>{}, "");
+
+struct function_object_10100101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10100101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10100101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100101 const volatile &&>>{}, "");
+
+struct function_object_10100110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10100110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100110 const volatile &&>>{}, "");
+
+struct function_object_10100111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10100111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10100111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10100111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10100111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10100111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10100111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10100111 const volatile &&>>{}, "");
+
+struct function_object_10101000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10101000>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101000 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101000 const volatile &&>>{}, "");
+
+struct function_object_10101001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10101001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10101001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101001 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101001 const volatile &&>>{}, "");
+
+struct function_object_10101010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10101010>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10101010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101010 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101010 const volatile &&>>{}, "");
+
+struct function_object_10101011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10101011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10101011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10101011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101011 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101011 const volatile &&>>{}, "");
+
+struct function_object_10101100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101100 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101100 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101100 const volatile &&>>{}, "");
+
+struct function_object_10101101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10101101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10101101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101101 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101101 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101101 const volatile &&>>{}, "");
+
+struct function_object_10101110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10101110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101110 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101110 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101110 const volatile &&>>{}, "");
+
+struct function_object_10101111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10101111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10101111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10101111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10101111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10101111 const &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101111 volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10101111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10101111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10101111 const volatile &&>>{}, "");
+
+struct function_object_10110000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110000 const volatile &&>>{}, "");
+
+struct function_object_10110001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10110001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10110001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110001 const volatile &&>>{}, "");
+
+struct function_object_10110010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10110010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110010 const volatile &&>>{}, "");
+
+struct function_object_10110011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10110011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10110011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10110011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110011 const volatile &&>>{}, "");
+
+struct function_object_10110100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10110100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110100 const volatile &&>>{}, "");
+
+struct function_object_10110101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10110101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10110101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110101 const volatile &&>>{}, "");
+
+struct function_object_10110110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10110110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10110110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110110 const volatile &&>>{}, "");
+
+struct function_object_10110111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10110111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10110111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10110111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10110111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10110111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10110111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10110111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10110111 const volatile &&>>{}, "");
+
+struct function_object_10111000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111000 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111000 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111000 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111000 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111000 const volatile &&>>{}, "");
+
+struct function_object_10111001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10111001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10111001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111001 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111001 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111001 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111001 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111001 const volatile &&>>{}, "");
+
+struct function_object_10111010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10111010 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111010 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111010 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111010 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111010 const volatile &&>>{}, "");
+
+struct function_object_10111011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10111011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10111011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10111011 &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111011 const>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111011 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111011 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111011 const volatile &&>>{}, "");
+
+struct function_object_10111100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10111100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111100 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111100 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111100 const volatile &&>>{}, "");
+
+struct function_object_10111101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10111101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10111101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111101 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111101 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111101 const volatile &&>>{}, "");
+
+struct function_object_10111110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_10111110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10111110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111110 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111110 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111110 const volatile &&>>{}, "");
+
+struct function_object_10111111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    // void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_10111111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_10111111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_10111111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_10111111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_10111111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_10111111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_10111111 volatile &&>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111111 const volatile>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_10111111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_10111111 const volatile &&>>{}, "");
+
+struct function_object_11000000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000000 const volatile &&>>{}, "");
+
+struct function_object_11000001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11000001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11000001 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000001 const volatile &&>>{}, "");
+
+struct function_object_11000010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11000010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000010 const volatile &&>>{}, "");
+
+struct function_object_11000011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11000011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11000011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11000011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000011 const volatile &&>>{}, "");
+
+struct function_object_11000100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000100 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000100 const volatile &&>>{}, "");
+
+struct function_object_11000101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11000101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11000101 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000101 const volatile &&>>{}, "");
+
+struct function_object_11000110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11000110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000110 const volatile &&>>{}, "");
+
+struct function_object_11000111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11000111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11000111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11000111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11000111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11000111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11000111 const volatile &&>>{}, "");
+
+struct function_object_11001000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001000 const volatile &&>>{}, "");
+
+struct function_object_11001001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11001001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11001001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001001 const volatile &&>>{}, "");
+
+struct function_object_11001010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11001010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001010 const volatile &&>>{}, "");
+
+struct function_object_11001011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11001011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11001011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11001011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001011 const volatile &&>>{}, "");
+
+struct function_object_11001100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001100 const volatile &&>>{}, "");
+
+struct function_object_11001101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11001101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11001101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001101 const volatile &&>>{}, "");
+
+struct function_object_11001110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11001110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001110 const volatile &&>>{}, "");
+
+struct function_object_11001111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11001111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11001111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11001111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11001111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11001111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11001111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11001111 const volatile &&>>{}, "");
+
+struct function_object_11010000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010000 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010000 const volatile &&>>{}, "");
+
+struct function_object_11010001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11010001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11010001 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010001 const volatile &&>>{}, "");
+
+struct function_object_11010010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11010010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010010 const volatile &&>>{}, "");
+
+struct function_object_11010011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11010011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11010011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11010011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010011 const volatile &&>>{}, "");
+
+struct function_object_11010100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11010100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11010100 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010100 const volatile &&>>{}, "");
+
+struct function_object_11010101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11010101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11010101 &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010101 const volatile &&>>{}, "");
+
+struct function_object_11010110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11010110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11010110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11010110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010110 const volatile &&>>{}, "");
+
+struct function_object_11010111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11010111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11010111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11010111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11010111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11010111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11010111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11010111 const volatile &&>>{}, "");
+
+struct function_object_11011000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011000 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011000 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011000 const volatile &&>>{}, "");
+
+struct function_object_11011001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11011001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11011001 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011001 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011001 const volatile &&>>{}, "");
+
+struct function_object_11011010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11011010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011010 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011010 const volatile &&>>{}, "");
+
+struct function_object_11011011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11011011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11011011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11011011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011011 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011011 const volatile &&>>{}, "");
+
+struct function_object_11011100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11011100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11011100 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011100 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011100 const volatile &&>>{}, "");
+
+struct function_object_11011101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11011101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11011101 &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011101 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011101 const volatile &&>>{}, "");
+
+struct function_object_11011110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11011110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11011110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11011110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011110 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011110 const volatile &&>>{}, "");
+
+struct function_object_11011111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    // void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11011111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11011111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11011111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11011111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11011111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11011111 volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11011111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11011111 const volatile &&>>{}, "");
+
+struct function_object_11100000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100000 const volatile &&>>{}, "");
+
+struct function_object_11100001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11100001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11100001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100001 const volatile &&>>{}, "");
+
+struct function_object_11100010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11100010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100010 const volatile &&>>{}, "");
+
+struct function_object_11100011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11100011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11100011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11100011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100011 const volatile &&>>{}, "");
+
+struct function_object_11100100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100100 const volatile &&>>{}, "");
+
+struct function_object_11100101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11100101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11100101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100101 const volatile &&>>{}, "");
+
+struct function_object_11100110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11100110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100110 const volatile &&>>{}, "");
+
+struct function_object_11100111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11100111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11100111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11100111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11100111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11100111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11100111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11100111 const volatile &&>>{}, "");
+
+struct function_object_11101000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11101000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101000 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101000 const volatile &&>>{}, "");
+
+struct function_object_11101001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11101001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11101001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11101001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101001 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101001 const volatile &&>>{}, "");
+
+struct function_object_11101010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11101010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101010 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101010 const volatile &&>>{}, "");
+
+struct function_object_11101011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11101011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11101011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11101011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101011 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101011 const volatile &&>>{}, "");
+
+struct function_object_11101100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101100>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11101100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101100 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101100 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101100 const volatile &&>>{}, "");
+
+struct function_object_11101101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11101101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11101101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11101101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101101 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101101 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101101 const volatile &&>>{}, "");
+
+struct function_object_11101110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101110>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11101110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101110 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101110 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101110 const volatile &&>>{}, "");
+
+struct function_object_11101111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    // void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11101111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11101111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11101111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11101111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11101111 const &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101111 volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11101111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11101111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11101111 const volatile &&>>{}, "");
+
+struct function_object_11110000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110000 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110000 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110000 const volatile &&>>{}, "");
+
+struct function_object_11110001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11110001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11110001 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110001 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110001 const volatile &&>>{}, "");
+
+struct function_object_11110010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11110010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110010 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110010 const volatile &&>>{}, "");
+
+struct function_object_11110011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11110011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11110011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11110011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110011 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110011 const volatile &&>>{}, "");
+
+struct function_object_11110100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11110100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11110100 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110100 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110100 const volatile &&>>{}, "");
+
+struct function_object_11110101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11110101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11110101 &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110101 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110101 const volatile &&>>{}, "");
+
+struct function_object_11110110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11110110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11110110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11110110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110110 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110110 const volatile &&>>{}, "");
+
+struct function_object_11110111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    // void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11110111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11110111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11110111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11110111 const &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11110111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11110111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11110111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11110111 const volatile &&>>{}, "");
+
+struct function_object_11111000
+{
+    // void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111000>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111000 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111000 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111000 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111000 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111000 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111000 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111000 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111000 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111000 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111000 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111000 const volatile &&>>{}, "");
+
+struct function_object_11111001
+{
+    void operator()() &;
+    // void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11111001>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11111001 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111001 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111001 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111001 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111001 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111001 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111001 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111001 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111001 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111001 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111001 const volatile &&>>{}, "");
+
+struct function_object_11111010
+{
+    // void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111010>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111010 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11111010 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111010 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111010 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111010 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111010 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111010 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111010 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111010 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111010 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111010 const volatile &&>>{}, "");
+
+struct function_object_11111011
+{
+    void operator()() &;
+    void operator()() &&;
+    // void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11111011>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11111011 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11111011 &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111011 const>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111011 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111011 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111011 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111011 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111011 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111011 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111011 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111011 const volatile &&>>{}, "");
+
+struct function_object_11111100
+{
+    // void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11111100>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111100 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111100 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111100 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111100 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111100 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111100 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111100 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111100 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111100 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111100 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111100 const volatile &&>>{}, "");
+
+struct function_object_11111101
+{
+    void operator()() &;
+    // void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11111101>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11111101 &>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111101 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111101 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111101 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111101 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111101 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111101 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111101 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111101 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111101 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111101 const volatile &&>>{}, "");
+
+struct function_object_11111110
+{
+    // void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void, function_type_void_t<function_object_11111110>>{}, "");
+static_assert(is_same<void, function_type_void_t<function_object_11111110 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11111110 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111110 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111110 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111110 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111110 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111110 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111110 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111110 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111110 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111110 const volatile &&>>{}, "");
+
+struct function_object_11111111
+{
+    void operator()() &;
+    void operator()() &&;
+    void operator()() const &;
+    void operator()() const &&;
+    void operator()() volatile &;
+    void operator()() volatile &&;
+    void operator()() const volatile &;
+    void operator()() const volatile &&;
+};
+
+static_assert(is_same<void() &, function_type_void_t<function_object_11111111>>{}, "");
+static_assert(is_same<void() &, function_type_void_t<function_object_11111111 &>>{}, "");
+static_assert(is_same<void() &&, function_type_void_t<function_object_11111111 &&>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111111 const>>{}, "");
+static_assert(is_same<void() const &, function_type_void_t<function_object_11111111 const &>>{}, "");
+static_assert(is_same<void() const &&, function_type_void_t<function_object_11111111 const &&>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111111 volatile>>{}, "");
+static_assert(is_same<void() volatile &, function_type_void_t<function_object_11111111 volatile &>>{}, "");
+static_assert(is_same<void() volatile &&, function_type_void_t<function_object_11111111 volatile &&>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111111 const volatile>>{}, "");
+static_assert(is_same<void() const volatile &, function_type_void_t<function_object_11111111 const volatile &>>{}, "");
+static_assert(is_same<void() const volatile &&, function_type_void_t<function_object_11111111 const volatile &&>>{}, "");
+
+} // namespace suite_function_object_overload_mixed
 
 //-----------------------------------------------------------------------------
 

@@ -82,41 +82,6 @@ struct function_object_type_noexcept_r
 {
 };
 
-template <typename T, typename A, typename = void>
-struct function_object_type_lvalue
-{
-};
-
-template <typename T, typename A, typename = void>
-struct function_object_type
-    : function_object_type_lvalue<T, A>
-{
-};
-
-// Try to find lvalue-reference call operator on non-reference object
-template <typename T, typename... Args>
-struct function_object_type_lvalue<T,
-                                   prototype<Args...>,
-                                   void_t<enable_if_t<!std::is_reference<T>::value>,
-                                          decltype(std::declval<T&>()(std::declval<Args>()...))>>
-    : function_object_type_noexcept_r<T&,
-                                      decltype(std::declval<T&>()(std::declval<Args>()...)),
-                                      prototype<Args...>>
-{
-};
-
-template <typename T, typename... Args>
-struct function_object_type<T,
-                            prototype<Args...>,
-                            void_t<typename function_object_type_noexcept_r<T,
-                                                                            decltype(std::declval<T>()(std::declval<Args>()...)),
-                                                                            prototype<Args...>>::type>>
-    : function_object_type_noexcept_r<T,
-                                      decltype(std::declval<T>()(std::declval<Args>()...)),
-                                      prototype<Args...>>
-{
-};
-
 // Uses "is_same<T, cv-qual remove_cv_t<T>>" to avoid greedy matching, where
 // "const T" matches both "const A" and "const volatile A" leading to ambiguous
 // template matching.
@@ -637,380 +602,298 @@ struct function_object_type_noexcept_r<T&&,
 
 #endif
 
-// Resolves cv-qualified overloaded call operators
+// Deduces return type and queries exact function type
 
-template <typename T, typename F1, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<const T, F1, F2, F3, F4>
-{
-    using type = F2;
-};
-
-template <typename T, typename F1, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<volatile T, F1, F2, F3, F4>
-{
-    using type = F3;
-};
-
-template <typename T, typename F1, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<const volatile T, F1, F2, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<T, void, F2, F3, F4>
+template <typename T, typename A, typename = void>
+struct function_object_type
 {
 };
 
-template <typename T, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<const T, void, F2, F3, F4>
-{
-    using type = F2;
-};
-
-template <typename T, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<volatile T, void, F2, F3, F4>
-{
-    using type = F3;
-};
-
-template <typename T, typename F2, typename F3, typename F4>
-struct function_object_select_cvqual<const volatile T, void, F2, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F3, typename F4>
-struct function_object_select_cvqual<T, F1, void, F3, F4>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F3, typename F4>
-struct function_object_select_cvqual<const T, F1, void, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F3, typename F4>
-struct function_object_select_cvqual<volatile T, F1, void, F3, F4>
-{
-    using type = F3;
-};
-
-template <typename T, typename F1, typename F3, typename F4>
-struct function_object_select_cvqual<const volatile T, F1, void, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F3, typename F4>
-struct function_object_select_cvqual<T, void, void, F3, F4>
-{
-    using type = F3;
-};
-
-template <typename T, typename F3, typename F4>
-struct function_object_select_cvqual<const T, void, void, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F3, typename F4>
-struct function_object_select_cvqual<volatile T, void, void, F3, F4>
-{
-    using type = F3;
-};
-
-template <typename T, typename F3, typename F4>
-struct function_object_select_cvqual<const volatile T, void, void, F3, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F2, typename F4>
-struct function_object_select_cvqual<T, F1, F2, void, F4>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F2, typename F4>
-struct function_object_select_cvqual<const T, F1, F2, void, F4>
-{
-    using type = F2;
-};
-
-template <typename T, typename F1, typename F2, typename F4>
-struct function_object_select_cvqual<volatile T, F1, F2, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F2, typename F4>
-struct function_object_select_cvqual<const volatile T, F1, F2, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F2, typename F4>
-struct function_object_select_cvqual<T, void, F2, void, F4>
-{
-    using type = F2;
-};
-
-template <typename T, typename F2, typename F4>
-struct function_object_select_cvqual<const T, void, F2, void, F4>
-{
-    using type = F2;
-};
-
-template <typename T, typename F2, typename F4>
-struct function_object_select_cvqual<volatile T, void, F2, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F2, typename F4>
-struct function_object_select_cvqual<const volatile T, void, F2, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F4>
-struct function_object_select_cvqual<T, F1, void, void, F4>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F4>
-struct function_object_select_cvqual<const T, F1, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F4>
-struct function_object_select_cvqual<volatile T, F1, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F4>
-struct function_object_select_cvqual<const volatile T, F1, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F4>
-struct function_object_select_cvqual<T, void, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F4>
-struct function_object_select_cvqual<const T, void, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F4>
-struct function_object_select_cvqual<volatile T, void, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F4>
-struct function_object_select_cvqual<const volatile T, void, void, void, F4>
-{
-    using type = F4;
-};
-
-template <typename T, typename F1, typename F2, typename F3>
-struct function_object_select_cvqual<T, F1, F2, F3, void>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F2, typename F3>
-struct function_object_select_cvqual<const T, F1, F2, F3, void>
-{
-    using type = F2;
-};
-
-template <typename T, typename F1, typename F2, typename F3>
-struct function_object_select_cvqual<volatile T, F1, F2, F3, void>
-{
-    using type = F3;
-};
-
-template <typename T, typename F1, typename F2, typename F3>
-struct function_object_select_cvqual<const volatile T, F1, F2, F3, void>
+template <typename T, typename... Args>
+struct function_object_type<T,
+                            prototype<Args...>,
+                            void_t<typename function_object_type_noexcept_r<T,
+                                                                            decltype(std::declval<T>()(std::declval<Args>()...)),
+                                                                            prototype<Args...>>::type>>
+    : function_object_type_noexcept_r<T,
+                                      decltype(std::declval<T>()(std::declval<Args>()...)),
+                                      prototype<Args...>>
 {
 };
 
-template <typename T, typename F2, typename F3>
-struct function_object_select_cvqual<T, void, F2, F3, void>
-{
-};
+// Detects ambiguous overloads
 
-template <typename T, typename F2, typename F3>
-struct function_object_select_cvqual<const T, void, F2, F3, void>
-{
-    using type = F2;
-};
+template <typename T, typename A, typename = void>
+struct is_function_object_ambiguous_1 : std::false_type {};
 
-template <typename T, typename F2, typename F3>
-struct function_object_select_cvqual<volatile T, void, F2, F3, void>
-{
-    using type = F3;
-};
-
-template <typename T, typename F2, typename F3>
-struct function_object_select_cvqual<const volatile T, void, F2, F3, void>
-{
-};
-
-template <typename T, typename F1, typename F3>
-struct function_object_select_cvqual<T, F1, void, F3, void>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F3>
-struct function_object_select_cvqual<const T, F1, void, F3, void>
-{
-};
-
-template <typename T, typename F1, typename F3>
-struct function_object_select_cvqual<volatile T, F1, void, F3, void>
-{
-    using type = F3;
-};
-
-template <typename T, typename F1, typename F3>
-struct function_object_select_cvqual<const volatile T, F1, void, F3, void>
-{
-};
-
-template <typename T, typename F3>
-struct function_object_select_cvqual<T, void, void, F3, void>
-{
-    using type = F3;
-};
-
-template <typename T, typename F3>
-struct function_object_select_cvqual<const T, void, void, F3, void>
-{
-};
-
-template <typename T, typename F3>
-struct function_object_select_cvqual<volatile T, void, void, F3, void>
-{
-    using type = F3;
-};
-
-template <typename T, typename F3>
-struct function_object_select_cvqual<const volatile T, void, void, F3, void>
-{
-};
-
-template <typename T, typename F1, typename F2>
-struct function_object_select_cvqual<T, F1, F2, void, void>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1, typename F2>
-struct function_object_select_cvqual<const T, F1, F2, void, void>
-{
-    using type = F2;
-};
-
-template <typename T, typename F1, typename F2>
-struct function_object_select_cvqual<volatile T, F1, F2, void, void>
-{
-};
-
-template <typename T, typename F1, typename F2>
-struct function_object_select_cvqual<const volatile T, F1, F2, void, void>
-{
-};
-
-template <typename T, typename F2>
-struct function_object_select_cvqual<T, void, F2, void, void>
-{
-    using type = F2;
-};
-
-template <typename T, typename F2>
-struct function_object_select_cvqual<const T, void, F2, void, void>
-{
-    using type = F2;
-};
-
-template <typename T, typename F2>
-struct function_object_select_cvqual<volatile T, void, F2, void, void>
-{
-};
-
-template <typename T, typename F2>
-struct function_object_select_cvqual<const volatile T, void, F2, void, void>
-{
-};
-
-template <typename T, typename F1>
-struct function_object_select_cvqual<T, F1, void, void, void>
-{
-    using type = F1;
-};
-
-template <typename T, typename F1>
-struct function_object_select_cvqual<const T, F1, void, void, void>
-{
-};
-
-template <typename T, typename F1>
-struct function_object_select_cvqual<volatile T, F1, void, void, void>
-{
-};
-
-template <typename T, typename F1>
-struct function_object_select_cvqual<const volatile T, F1, void, void, void>
-{
-};
-
-template <typename T>
-struct function_object_select_cvqual<T, void, void, void, void>
-{
-};
-
-template <typename T>
-struct function_object_select_cvqual<const T, void, void, void, void>
-{
-};
-
-template <typename T>
-struct function_object_select_cvqual<volatile T, void, void, void, void>
-{
-};
-
-template <typename T>
-struct function_object_select_cvqual<const volatile T, void, void, void, void>
+template <typename T, typename A>
+struct is_function_object_ambiguous_1<T,
+                                      A,
+                                      void_t<type_t<function_object_type<type_t<add_type_const<T>>, A>>,
+                                             type_t<function_object_type<type_t<add_type_volatile<T>>, A>>>>
+    : std::true_type
 {
 };
 
 template <typename T, typename A, typename = void>
+struct is_function_object_ambiguous
+    : is_function_object_ambiguous_1<T, A>
+{
+};
+
+template <typename T, typename A>
+struct is_function_object_ambiguous<T,
+                                    A,
+                                    void_t<type_t<function_object_type<T, A>>>>
+    : std::false_type
+{
+};
+
+// Prioritized selection of overload with nearly matching cv-qualifiers
+
+template <typename T, typename A, typename = void>
+struct function_object_near_cv
+{
+};
+
+template <typename T, typename A>
+struct function_object_near_cv<T,
+                               A,
+                               void_t<type_t<function_object_type<type_t<add_type_cv<T>>, A>>>>
+    : function_object_type<type_t<add_type_cv<T>>, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_near_volatile
+    : function_object_near_cv<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_near_volatile<T,
+                                     A,
+                                     void_t<enable_if_t<!std::is_const<remove_reference_t<T>>::value>,
+                                            type_t<function_object_type<type_t<add_type_volatile<T>>, A>>>>
+    : function_object_type<type_t<add_type_volatile<T>>, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_near_const
+    : function_object_near_volatile<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_near_const<T,
+                                  A,
+                                  void_t<enable_if_t<!std::is_volatile<remove_reference_t<T>>::value>,
+                                         type_t<function_object_type<type_t<add_type_const<T>>, A>>>>
+    : function_object_type<type_t<add_type_const<T>>, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_near
+    : function_object_near_const<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_near<T,
+                            A,
+                            void_t<type_t<function_object_type<T, A>>>>
+    : function_object_type<T, A>
+{
+};
+
+// lvalue-referenced object
+
+template <typename T, typename A, typename = void>
+struct function_object_lvalue_near
+{
+};
+
+template <typename T, typename A>
+struct function_object_lvalue_near<T,
+                                   A,
+                                   void_t<type_t<function_object_near<T, A>>>>
+    : function_object_near<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_lvalue_near<T,
+                                   A,
+                                   void_t<type_t<function_object_near<T&, A>>>>
+    : function_object_near<T&, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_lvalue_ambiguity_guard
+    : function_object_lvalue_near<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_lvalue_ambiguity_guard<T,
+                                              A,
+                                              enable_if_t<is_function_object_ambiguous<T, A>::value ||
+                                                          is_function_object_ambiguous<T&, A>::value>>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_lvalue
+    : function_object_lvalue_ambiguity_guard<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_lvalue<T,
+                              A,
+                              void_t<type_t<function_object_type<T&, A>>>>
+    : function_object_type<T&, A>
+{
+    // Exact match
+};
+
+// rvalue-referenced object
+
+template <typename T, typename A, typename = void>
+struct function_object_rvalue_exact_const_ref
+    : function_object_near<T, A>
+{
+};
+
+// Special case for life-time extension
+template <typename T, typename A>
+struct function_object_rvalue_exact_const_ref<T,
+                                              A,
+                                              void_t<enable_if_t<!std::is_volatile<remove_reference_t<T>>::value>,
+                                                     type_t<function_object_type<const T&, A>>>>
+    : function_object_type<const T&, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_rvalue_exact_value
+    : function_object_rvalue_exact_const_ref<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_rvalue_exact_value<T,
+                                          A,
+                                          void_t<type_t<function_object_type<T, A>>>>
+    : function_object_type<T, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_rvalue_near
+    : function_object_rvalue_exact_value<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_rvalue_near<T,
+                                   A,
+                                   void_t<type_t<function_object_near<T&&, A>>>>
+    : function_object_near<T&&, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_rvalue_ambiguity_guard
+    : function_object_rvalue_near<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_rvalue_ambiguity_guard<T,
+                                              A,
+                                              enable_if_t<is_function_object_ambiguous<T, A>::value ||
+                                                          is_function_object_ambiguous<T&&, A>::value>>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_rvalue
+    : function_object_rvalue_ambiguity_guard<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_rvalue<T,
+                              A,
+                              void_t<type_t<function_object_type<T&&, A>>>>
+    : function_object_type<T&&, A>
+{
+    // Exact match
+};
+
+// object
+
+template <typename T, typename A, typename = void>
+struct function_object_value_exact_lvalue
+    : function_object_near<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_value_exact_lvalue<T,
+                                          A,
+                                          void_t<type_t<function_object_lvalue<T, A>>>>
+    : function_object_lvalue<T, A>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_value_ambiguity_guard
+    : function_object_value_exact_lvalue<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_value_ambiguity_guard<T,
+                                             A,
+                                             enable_if_t<is_function_object_ambiguous<T, A>::value>>
+{
+};
+
+template <typename T, typename A, typename = void>
+struct function_object_value
+    : function_object_value_ambiguity_guard<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_value<T,
+                             A,
+                             void_t<type_t<function_object_type<T, A>>>>
+    : function_object_type<T, A>
+{
+    // Exact match
+};
+
+template <typename T, typename A, typename = void>
 struct function_object_call
-    : function_object_select_cvqual<T,
-                                    type_eval_t<function_object_type<remove_cv_t<T>, A>>,
-                                    type_eval_t<function_object_type<const remove_cv_t<T>, A>>,
-                                    type_eval_t<function_object_type<volatile remove_cv_t<T>, A>>,
-                                    type_eval_t<function_object_type<const volatile remove_cv_t<T>, A>>>
+    : function_object_value<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_call<T&, A>
+    : function_object_lvalue<T, A>
+{
+};
+
+template <typename T, typename A>
+struct function_object_call<T&&, A>
+    : function_object_rvalue<T, A>
 {
 };
 
