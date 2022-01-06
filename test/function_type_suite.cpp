@@ -23,19 +23,6 @@ namespace impl
 {
 
 template <typename, typename, typename = void>
-struct is_function_type : std::false_type
-{
-};
-
-template <typename T, typename... Args>
-struct is_function_type<T,
-                        prototype<Args...>,
-                        void_t<function_type_t<T, Args...>>>
-    : std::true_type
-{
-};
-
-template <typename, typename, typename = void>
 struct function_type_void
 {
     using type = void;
@@ -50,11 +37,6 @@ struct function_type_void<T,
 };
 
 } // namespace impl
-
-template <typename T, typename... Args>
-struct is_function_type : impl::is_function_type<T, prototype<Args...>>
-{
-};
 
 template <typename T, typename... Args>
 using function_type_void_t = typename impl::function_type_void<T, prototype<Args...>>::type;
