@@ -16,6 +16,13 @@
 
 constexpr bool noexcept_true = !std::is_same<void(), void() noexcept>();
 
+// Compilers disagree about invocation of const-ref qualified function on rvalue objects
+#if defined(_MSC_VER)
+constexpr bool invoke_xref = true;
+#else
+constexpr bool invoke_xref = false;
+#endif
+
 void function();
 void function_noexcept() noexcept;
 
@@ -133,10 +140,10 @@ static_assert( is_invocable<void(function_object::*)() const, const function_obj
 
 static_assert( is_invocable<void(function_object::*)() const &, function_object *>(), "");
 static_assert( is_invocable<void(function_object::*)() const &, function_object&>(), "");
-static_assert(!is_invocable<void(function_object::*)() const &, function_object&&>(), "");
+static_assert( is_invocable<void(function_object::*)() const &, function_object&&>() == invoke_xref, "");
 static_assert( is_invocable<void(function_object::*)() const &, const function_object *>(), "");
 static_assert( is_invocable<void(function_object::*)() const &, const function_object&>(), "");
-static_assert(!is_invocable<void(function_object::*)() const &, const function_object&&>(), "");
+static_assert( is_invocable<void(function_object::*)() const &, const function_object&&>() == invoke_xref, "");
 
 static_assert(!is_invocable<void(function_object::*)() const &&, function_object*>(), "");
 static_assert(!is_invocable<void(function_object::*)() const &&, function_object&>(), "");
@@ -175,10 +182,10 @@ static_assert( is_invocable<void(function_object::*)() const noexcept, const fun
 
 static_assert( is_invocable<void(function_object::*)() const & noexcept, function_object *>(), "");
 static_assert( is_invocable<void(function_object::*)() const & noexcept, function_object&>(), "");
-static_assert(!is_invocable<void(function_object::*)() const & noexcept, function_object&&>(), "");
+static_assert( is_invocable<void(function_object::*)() const & noexcept, function_object&&>() == invoke_xref, "");
 static_assert( is_invocable<void(function_object::*)() const & noexcept, const function_object *>(), "");
 static_assert( is_invocable<void(function_object::*)() const & noexcept, const function_object&>(), "");
-static_assert(!is_invocable<void(function_object::*)() const & noexcept, const function_object&&>(), "");
+static_assert( is_invocable<void(function_object::*)() const & noexcept, const function_object&&>() == invoke_xref, "");
 
 static_assert(!is_invocable<void(function_object::*)() const && noexcept, function_object*>(), "");
 static_assert(!is_invocable<void(function_object::*)() const && noexcept, function_object&>(), "");
