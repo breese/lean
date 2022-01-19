@@ -81,7 +81,7 @@ struct in_place_type_t
 static constexpr in_place_t in_place;
 
 template <typename T>
-static constexpr in_place_type_t<T> in_place_type;
+static constexpr in_place_type_t<T> in_place_type {};
 
 #define LEAN_HAS_IN_PLACE 1
 #define LEAN_HAS_IN_PLACE_TYPE 1

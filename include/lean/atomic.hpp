@@ -12,14 +12,19 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <atomic>
+#include <lean/detail/config.hpp>
 
 #if __cpp_lib_atomic_wait >= 201907L
 # include <lean/detail/std/atomic.hpp>
+# define LEAN_LIB_ATOMIC_WAIT __cpp_lib_atomic_wait
 #elif (__linux__)
 # include <lean/detail/linux/atomic.hpp>
+# define LEAN_LIB_ATOMIC_WAIT LEAN_CXX11
 #else
-# error "Platform not supported"
+# define LEAN_LIB_ATOMIC_WAIT LEAN_CXX_NEVER
 #endif
+
+#if LEAN_CXX >= LEAN_LIB_ATOMIC_WAIT
 
 namespace lean
 {
@@ -68,4 +73,5 @@ using v1::atomic_wait_explicit;
 
 } // namespace lean
 
+#endif // LEAN_LIB_ATOMIC_WAIT
 #endif // LEAN_ATOMIC_HPP

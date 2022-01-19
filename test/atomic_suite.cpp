@@ -2,6 +2,8 @@
 #include <thread>
 #include <lean/atomic.hpp>
 
+#if LEAN_CXX <= LEAN_LIB_ATOMIC_WAIT
+
 //-----------------------------------------------------------------------------
 
 namespace atomic_wait_suite
@@ -69,3 +71,9 @@ int main()
     atomic_wait_suite::run();
     return 0;
 }
+
+#else
+
+int main () { return 0; }
+
+#endif
