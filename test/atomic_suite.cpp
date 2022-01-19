@@ -2,7 +2,7 @@
 #include <thread>
 #include <lean/atomic.hpp>
 
-#if LEAN_CXX <= LEAN_LIB_ATOMIC_WAIT
+#if LEAN_CXX >= LEAN_LIB_ATOMIC_WAIT
 
 //-----------------------------------------------------------------------------
 
