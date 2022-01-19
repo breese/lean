@@ -107,7 +107,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...)>>>>
 {
-    using type = R(Args...);
+    using type = type_t<function_object_probe<R (T::*)(Args...)>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -117,7 +117,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) &>>>>
 {
-    using type = R(Args...) &;
+    using type = type_t<function_object_probe<R (T::*)(Args...) &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -127,7 +127,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) &&>>>>
 {
-    using type = R(Args...) &&;
+    using type = type_t<function_object_probe<R (T::*)(Args...) &&>>;
 };
 
 // const
@@ -139,7 +139,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const>>>>
 {
-    using type = R(Args...) const;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -149,7 +149,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const &>>>>
 {
-    using type = R (Args...) const &;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -159,7 +159,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const &&>>>>
 {
-    using type = R (Args...) const &&;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const &&>>;
 };
 
 // volatile
@@ -171,7 +171,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) volatile>>>>
 {
-    using type = R (Args...) volatile;
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -181,7 +181,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) volatile &>>>>
 {
-    using type = R (Args...) volatile &;
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -191,7 +191,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) volatile &&>>>>
 {
-    using type = R (Args...) volatile &&;
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile &&>>;
 };
 
 // const volatile
@@ -203,7 +203,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const volatile>>>>
 {
-    using type = R (Args...) const volatile;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -213,7 +213,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const volatile &>>>>
 {
-    using type = R (Args...) const volatile &;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -223,7 +223,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args...) const volatile &&>>>>
 {
-    using type = R (Args...) const volatile &&;
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile &&>>;
 };
 
 // mutable ellipsis
@@ -235,7 +235,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...)>>>>
 {
-    using type = R(Args..., ...);
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...)>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -245,7 +245,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) &>>>>
 {
-    using type = R(Args..., ...) &;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -255,7 +255,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) &&>>>>
 {
-    using type = R(Args..., ...) &&;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) &&>>;
 };
 
 // const ellipsis
@@ -267,7 +267,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const>>>>
 {
-    using type = R (Args..., ...) const;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -277,7 +277,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const &>>>>
 {
-    using type = R (Args..., ...) const &;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -287,7 +287,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const &&>>>>
 {
-    using type = R (Args..., ...) const &&;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const &&>>;
 };
 
 // volatile ellipsis
@@ -299,7 +299,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) volatile>>>>
 {
-    using type = R (Args..., ...) volatile;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -309,7 +309,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) volatile &>>>>
 {
-    using type = R (Args..., ...) volatile &;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -319,7 +319,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) volatile &&>>>>
 {
-    using type = R (Args..., ...) volatile &&;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile &&>>;
 };
 
 // const volatile ellipsis
@@ -331,7 +331,7 @@ struct function_object_type_r<T,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const volatile>>>>
 {
-    using type = R (Args..., ...) const volatile;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -341,7 +341,7 @@ struct function_object_type_r<T&,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const volatile &>>>>
 {
-    using type = R (Args..., ...) const volatile &;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile &>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -351,7 +351,7 @@ struct function_object_type_r<T&&,
                               void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                      type_t<function_object_probe<R (T::*)(Args..., ...) const volatile &&>>>>
 {
-    using type = R (Args..., ...) const volatile &&;
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile &&>>;
 };
 
 #if __cpp_noexcept_function_type >= 201510L
@@ -365,7 +365,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) noexcept>>>>
 {
-    using type = R (Args...) noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -375,7 +375,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) & noexcept>>>>
 {
-    using type = R (Args...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -385,7 +385,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) && noexcept>>>>
 {
-    using type = R (Args...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) && noexcept>>;
 };
 
 // const noexcept
@@ -397,7 +397,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const noexcept>>>>
 {
-    using type = R (Args...) const noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -407,7 +407,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const & noexcept>>>>
 {
-    using type = R (Args...) const & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -417,7 +417,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const && noexcept>>>>
 {
-    using type = R (Args...) const && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const && noexcept>>;
 };
 
 // volatile noexcept
@@ -429,7 +429,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) volatile noexcept>>>>
 {
-    using type = R (Args...) volatile noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -439,7 +439,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) volatile & noexcept>>>>
 {
-    using type = R (Args...) volatile & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -449,7 +449,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) volatile && noexcept>>>>
 {
-    using type = R (Args...) volatile && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) volatile && noexcept>>;
 };
 
 // const volatile noexcept
@@ -461,7 +461,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const volatile noexcept>>>>
 {
-    using type = R (Args...) const volatile noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -471,7 +471,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const volatile & noexcept>>>>
 {
-    using type = R (Args...) const volatile & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -481,7 +481,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args...) const volatile && noexcept>>>>
 {
-    using type = R (Args...) const volatile && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args...) const volatile && noexcept>>;
 };
 
 // mutable noexcept ellipsis
@@ -493,7 +493,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) noexcept>>>>
 {
-    using type = R (Args..., ...) noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -503,7 +503,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) & noexcept>>>>
 {
-    using type = R (Args..., ...) & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -513,7 +513,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) && noexcept>>>>
 {
-    using type = R (Args..., ...) && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) && noexcept>>;
 };
 
 // const noexcept ellipsis
@@ -525,7 +525,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const noexcept>>>>
 {
-    using type = R (Args..., ...) const noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -535,7 +535,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const & noexcept>>>>
 {
-    using type = R (Args..., ...) const & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -545,7 +545,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, const remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const && noexcept>>>>
 {
-    using type = R (Args..., ...) const && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const && noexcept>>;
 };
 
 // volatile noexcept ellipsis
@@ -557,7 +557,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) volatile noexcept>>>>
 {
-    using type = R (Args..., ...) volatile noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -567,7 +567,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) volatile & noexcept>>>>
 {
-    using type = R (Args..., ...) volatile & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -577,7 +577,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) volatile && noexcept>>>>
 {
-    using type = R (Args..., ...) volatile && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) volatile && noexcept>>;
 };
 
 // const volatile noexcept ellipsis
@@ -589,7 +589,7 @@ struct function_object_type_noexcept_r<T,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const volatile noexcept>>>>
 {
-    using type = R (Args..., ...) const volatile noexcept(noexcept(std::declval<T>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -599,7 +599,7 @@ struct function_object_type_noexcept_r<T&,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const volatile & noexcept>>>>
 {
-    using type = R (Args..., ...) const volatile & noexcept(noexcept(std::declval<T&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile & noexcept>>;
 };
 
 template <typename T, typename R, typename... Args>
@@ -609,7 +609,7 @@ struct function_object_type_noexcept_r<T&&,
                                        void_t<enable_if_t<is_same<T, const volatile remove_cv_t<T>>::value>,
                                               type_t<function_object_probe<R (T::*)(Args..., ...) const volatile && noexcept>>>>
 {
-    using type = R (Args..., ...) const volatile && noexcept(noexcept(std::declval<T&&>().operator()(std::declval<Args>()...)));
+    using type = type_t<function_object_probe<R (T::*)(Args..., ...) const volatile && noexcept>>;
 };
 
 #endif
